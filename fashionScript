@@ -1,0 +1,5 @@
+#! /home/bdillman/workspace/fashion/bin/python
+import sys
+import fashion.fashionCmds
+
+fashion.fashionCmds.main(sys.argv[1:]) 

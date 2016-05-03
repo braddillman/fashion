@@ -1,0 +1,5 @@
+% for greet in greetings:
+% for place in planets:
+${greet}, ${place}!
+% endfor
+% endfor
