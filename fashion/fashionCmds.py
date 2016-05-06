@@ -160,6 +160,31 @@ def create_model(args):
     else:
         print("project doesn't exist")    
 
+def create_xform(args):
+    '''Create a new xform'''
+    proj = project.findProject(args.project)
+    if proj.exists():
+        proj.init_db()
+        targetFile = os.path.join(proj.getLocalXformDir(), args.filename+'.py')
+        lib = proj.getLocalLibrary()
+        if lib.addFile(targetFile, 4, fileFormat='python3'):
+            lib.save()
+            if not os.path.exists(targetFile):
+                proj.loadTemplates()
+                xfName = os.path.basename(os.path.splitext(targetFile)[0])
+                model = { 'name'    : xfName,
+                          'template': 'myTemplate',
+                          'target'  : 'myTarget' }
+                templates.createDefaultFile(model, "defaultXform.py", targetFile)
+                print("Created new xform {0}".format(targetFile))
+                return True
+            else:
+                print("Added existing xform {0}".format(targetFile))
+                return True
+        print("Failed to create xform {0}".format(targetFile))
+    else:
+        print("project doesn't exist")    
+
 def main(args):
     '''Parse command from command line args, then delegate.'''
     parser = argparse.ArgumentParser()
@@ -189,6 +214,9 @@ def main(args):
     createModelParse.add_argument('kind',     help='kind of model to create')
     createModelParse.add_argument('-f', '--format', help="file format", nargs=1)
 
+    createXformParse = subparsers.add_parser('create-xform', help='create a new xform')
+    createXformParse.add_argument('filename', help='filename for new xform')
+
     versionParse = subparsers.add_parser('version', help='report version information')
 
     result = parser.parse_args(args);
@@ -210,7 +238,8 @@ def main(args):
         "build": buildCmd,
         "kill": killCmd,
         "version": versionCmd,
-        "create-model": create_model
+        "create-model": create_model,
+        "create-xform": create_xform
     }
 
     try:
