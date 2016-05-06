@@ -8,6 +8,8 @@ Copyright (c) 2016 Bradford Dillman
 Describe and manipulate collections of metadata for models, templates and 
 xforms.
 '''
+
+import fnmatch
 import glob
 import logging
 import os.path
@@ -27,6 +29,19 @@ class Library(object):
         '''Constructor'''
         self.filename = filename
         self.globs = []
+        
+    def matchGlobs(self, filename):
+        return [g for g in self.globs
+                  for path in glob.glob(g['glob'], recursive=g['recursive'])
+                  if fnmatch.fnmatch(filename, path)]
+        
+    def addFile(self, filename, role, kind='fashion_unknown', fileFormat='yaml'):
+        matchedGlobs = self.matchGlobs(filename)
+        for g in matchedGlobs:
+            raise("conflicting glob: {0}".format(g))
+        else:
+            self.addGlob(filename, role, kind, fileFormat, recursive=False)
+            return True
         
     def addGlob(self, glob, role, kind='fashion_unknown', fileFormat='yaml', recursive=True):
         '''Add another glob to this library'''
@@ -65,27 +80,16 @@ class Library(object):
                         xfList.extend([xf])
         return xfList
     
-    def getTemplateDirectories(self):
-        '''Get the directories which contain template files.'''
-        templateGlobs = [g for g in self.globs if g['role'] == 2]
+    def getDirectories(self, role):
+        '''Get the directories which contain model files.'''
+        globs = [g for g in self.globs if g['role'] == role]
         # globs are specified relative to library file
         with xformUtil.cd(os.path.dirname(self.filename)):
-            for g in templateGlobs:
-                recursive = g.get('recursive', True)
-                return [os.path.abspath(d) for d in glob.glob(g['glob'], recursive=recursive)
-                                           if os.path.isdir(d) ]
-                
-    def getXformDirectories(self):
-        '''Get the directories which contain xform files.'''
-        xformGlobs = [g for g in self.globs if g['role'] == 4]
-        # globs are specified relative to library file
-        with xformUtil.cd(os.path.dirname(self.filename)):
-            for g in xformGlobs:
-                recursive = g.get('recursive', True)
-                return [os.path.abspath(d) for d in glob.glob(g['glob'], recursive=recursive)
-                                           if os.path.isdir(d) ]
-            
-        
+            dirs = [os.path.abspath(d) for g in globs
+                                       for d in glob.glob(g['glob'], recursive=g.get('recursive', True))
+                                       if os.path.isdir(d) ]
+            logging.debug("getDirectories({0})={1}".format(role, dirs))
+            return dirs
         
     def load(self):
         '''Load a library description file.'''
@@ -94,5 +98,5 @@ class Library(object):
             
     def save(self):
         '''Save a library description file.'''
-        with open(self.filename, "a") as stream:
+        with open(self.filename, "w") as stream:
             yaml.dump(self.globs, stream, default_flow_style = False)

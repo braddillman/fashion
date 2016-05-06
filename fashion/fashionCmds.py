@@ -76,19 +76,6 @@ def killCmd(args):
     else:
         print("project doesn't exist")
 
-def xformCmd(args):
-    '''Run a single transform.'''
-    
-    #
-    # Pseudocode:
-    #
-    # Find the xform and load it
-    # find all the inputs - done by xform or by fashion framework?
-    # xform the inputs to outputs
-    #
-    
-    pass
-
 def buildCmd(args):
     '''Perform a full build.'''
     proj = project.findProject(args.project)
@@ -146,6 +133,32 @@ def nabCmd(args):
 def versionCmd(args):
     '''Version of fashion'''
     print("version: unstable dev")
+    
+def create_model(args):
+    '''Create a new model'''
+    proj = project.findProject(args.project)
+    if proj.exists():
+        proj.init_db()
+        targetFile = os.path.join(proj.getLocalModelDir(), args.filename)
+        kind = args.kind
+        if args.format == None:
+            fileFormat = 'yaml'
+        else:
+            fileFormat = args.format
+        lib = proj.getLocalLibrary()
+        if lib.addFile(targetFile, 3, kind, fileFormat):
+            lib.save()
+            if not os.path.exists(targetFile):
+                proj.loadTemplates()
+                templates.createDefaultFile({}, "defaultModel.yaml", targetFile)
+                print("Created new model {0}".format(targetFile))
+                return True
+            else:
+                print("Added existing model {0}".format(targetFile))
+                return True
+        print("Failed to create model {0}".format(targetFile))
+    else:
+        print("project doesn't exist")    
 
 def main(args):
     '''Parse command from command line args, then delegate.'''
@@ -168,13 +181,13 @@ def main(args):
     nabParse.add_argument('filename', help='file to nab')
     nabParse.add_argument('-n', '--name',   help='xform name', nargs=1)
 
-    xformParse = subparsers.add_parser('xform', help='transform models')
-    xformParse.add_argument('xformName', help='xform name')
-
     buildParse = subparsers.add_parser('build', help='full build')
     buildParse.add_argument('-f', '--force', help="force overwrite", action='store_true')
     
-    modelParse = subparsers.add_parser('model', help='work with models')
+    createModelParse = subparsers.add_parser('create-model', help='create a new model')
+    createModelParse.add_argument('filename', help='filename for new model')
+    createModelParse.add_argument('kind',     help='kind of model to create')
+    createModelParse.add_argument('-f', '--format', help="file format", nargs=1)
 
     versionParse = subparsers.add_parser('version', help='report version information')
 
@@ -194,10 +207,10 @@ def main(args):
     cmds = {
         "init": initCmd,
         "nab": nabCmd,
-        "xform": xformCmd,
         "build": buildCmd,
         "kill": killCmd,
-        "version": versionCmd
+        "version": versionCmd,
+        "create-model": create_model
     }
 
     try:

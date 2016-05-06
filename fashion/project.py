@@ -92,12 +92,14 @@ class Project:
 				
 			# default library
 			lib = library.Library(projectModel['libraries'][0])
-			lib.addGlob(glob="./model/**/*.yaml", recursive=True,
+			lib.addGlob(glob="./model/", recursive=False,
 					    role=3, kind='fashion_unknown', fileFormat='yaml')
+			lib.addGlob(glob="./xform/", recursive=False,
+					    role=4, fileFormat='python3')
+			lib.addGlob(glob="./template/", recursive=False,
+					    role=2, fileFormat='mako')
 			lib.addGlob(glob="./xform/**/*.py", recursive=True,
 					    role=4, fileFormat='python3')
-			lib.addGlob(glob="./template", recursive=False,
-					    role=2, fileFormat='mako')
 			lib.save()
 			
 			self.projectModel = projectModel
@@ -129,7 +131,7 @@ class Project:
 		for libFilename in self.projectModel['libraries']:
 			l = library.Library(libFilename)
 			l.load()
-			dirs.extend(l.getTemplateDirectories())
+			dirs.extend(l.getDirectories(2))
 		templates.setDirectories(self.projectModel['projectPath'], self.projectModel['mirrorPath'], dirs, self.projectModel['tmplMods'])
 		
 	def getLocalLibrary(self):
@@ -137,13 +139,14 @@ class Project:
 		l.load()
 		return l
 		
+	def getLocalModelDir(self):
+		return self.getLocalLibrary().getDirectories(3)[0]
+		
 	def getLocalTemplateDir(self):
-		return self.getLocalLibrary().getTemplateDirectories()[0]
+		return self.getLocalLibrary().getDirectories(2)[0]
 		
 	def getLocalXformDir(self):
-		localLib = self.getLocalLibrary()
-		dirs = localLib.getXformDirectories()
-		return dirs[0]
+		return self.getLocalLibrary().getDirectories(4)[0]
 	
 	def destroy(self):
 		'''Destroy an existing fashion project.''' 
