@@ -29,8 +29,8 @@ def xform(fashion_planets=None, fashion_greetings=None):
     '''Generate many source files from 2 input models.'''
     logging.debug("greetWorlds xform running")
     
-    planets   = readModels(fashion_planets)
-    greetings = readModels(fashion_greetings)
+    planets   = readModels(fashion_planets, flatten=True)
+    greetings = readModels(fashion_greetings, flatten=True)
     
     model = { 'planets'  : planets, 
               'greetings': greetings }

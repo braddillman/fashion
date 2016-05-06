@@ -31,9 +31,14 @@ class cd:
 
 
 
-def readModels(modelFashioFiles):
+def readModels(modelFashionFiles, flatten=False):
     '''Read a list of models.'''
-    return [p for f in modelFashioFiles for p in f.loadFile()]
+    modelList = [f.loadFile() for f in modelFashionFiles]
+    if flatten:
+        models = [item for sublist in modelList for item in sublist]
+    else:
+        models = modelList
+    return models
     
 def writeModel(model=None, kind=None, fileFormat='yaml', filename=None):
     '''Write a single model.'''
