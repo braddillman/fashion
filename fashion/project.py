@@ -24,7 +24,7 @@ from . import templates
 #
 # Get the FASHION_HOME directory.
 #
-FASHION_HOME  = pathlib.Path(os.path.dirname(__file__))
+FASHION_HOME  = pathlib.Path(os.path.join(os.path.dirname(__file__), os.pardir))
 
 class Project:
 	'''Represents a fashion user project.'''
@@ -56,6 +56,7 @@ class Project:
 		'''Create a new fashion project.'''
 		try:
 			# create the project model
+			print("FASHION_HOME={0}".format(FASHION_HOME))
 			projectModel = { 'projectPath'   : str(self.projectPath),
 							 'fashionPath'   : str(self.fashionPath),
 							 'fashionDbPath' : str(self.fashionDbPath),
@@ -131,6 +132,19 @@ class Project:
 			dirs.extend(l.getTemplateDirectories())
 		templates.setDirectories(self.projectModel['projectPath'], self.projectModel['mirrorPath'], dirs, self.projectModel['tmplMods'])
 		
+	def getLocalLibrary(self):
+		l = library.Library(self.projectModel['libraries'][0])
+		l.load()
+		return l
+		
+	def getLocalTemplateDir(self):
+		return self.getLocalLibrary().getTemplateDirectories()[0]
+		
+	def getLocalXformDir(self):
+		localLib = self.getLocalLibrary()
+		dirs = localLib.getXformDirectories()
+		return dirs[0]
+	
 	def destroy(self):
 		'''Destroy an existing fashion project.''' 
 		if self.exists():

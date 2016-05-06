@@ -10,6 +10,7 @@ Adapt mako templates for use by fashion application.
 
 import logging
 import os.path
+import pathlib
 import shutil
 
 from mako.lookup import TemplateLookup
@@ -45,6 +46,8 @@ def setDirectories(projDir=None, mirrorDir=None, templateDirs=None, moduleDir=No
     global projectDirectory
     projectDirectory = projDir
     mirrorDirectory = mirrorDir
+    print("------------------------------------------------------------")
+    print(str(templateDirs))
     templateLookup = TemplateLookup(templateDirs, module_directory=moduleDir)
 
 def generateFile(model=None, templateFile=None, targetFile=None, **kwargs):
@@ -72,9 +75,17 @@ def generateFile(model=None, templateFile=None, targetFile=None, **kwargs):
        
     
     mytemplate = templateLookup.get_template(templateFile)
+    pathlib.Path(os.path.dirname(targetFile)).mkdir(parents=True, exist_ok=True)
     with open(targetFile, 'w') as f:
         f.write(mytemplate.render(**model))
 
     # copy to mirror directory
+    pathlib.Path(os.path.dirname(mirrorFile)).mkdir(parents=True, exist_ok=True)
     shutil.copy2(targetFile, mirrorFile)
+    
+def createDefaultFile(model=None, templateFile=None, targetFile=None, **kwargs):
+    mytemplate = templateLookup.get_template(templateFile)
+    pathlib.Path(os.path.dirname(targetFile)).mkdir(parents=True, exist_ok=True)
+    with open(targetFile, 'w') as f:
+        f.write(mytemplate.render(**model))
     

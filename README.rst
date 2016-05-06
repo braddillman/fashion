@@ -1,24 +1,43 @@
-A sample Python project
-=======================
+# Fashion
 
-A sample project that exists as an aid to the `Python Packaging User Guide
-<https://packaging.python.org>`_'s `Tutorial on Packaging and Distributing
-Projects <https://packaging.python.org/en/latest/distributing.html>`_.
+Fashion is a command line utility for simple model transformation and source code generation, aimed at a target audience of developers.
 
-This projects does not aim to cover best practices for Python project
-development as a whole. For example, it does not provide guidance or tool
-recommendations for version control, documentation, or testing.
+the pitch?
 
-----
+## The problem
 
-This is the README file for the project.
+Managing multiple ad hoc model transformations and code generation.
 
-The file should use UTF-8 encoding and be written using ReStructured Text. It
-will be used to generate the project webpage on PyPI and will be displayed as
-the project homepage on common code-hosting services, and should be written for
-that purpose.
+## Installation
 
-Typical contents for this file would include an overview of the project, basic
-usage examples, etc. Generally, including the project changelog in here is not
-a good idea, although a simple "What's New" section for the most recent version
-may be appropriate.
+Fashion is a straightforward python 3.5 application. 
+
+### prerequisites
+- install python 3.5+ 
+
+### install from github
+- TBD
+
+### install from github pip
+- TBD
+
+## Getting started
+
+- get the sample project
+- add fashion to an existing project (sample)
+- nab a file
+- build
+- edit the nabbed template
+- edit the nabbed model
+- build
+- create-model
+- edit the model
+- create-xform
+- edit the xform (re-use nabbed template)
+- build
+
+## Dependencies
+The following python libraries are used:
+- [Mako templates](http://www.makotemplates.org/) (MIT license)
+- [PyYAML](http://pyyaml.org/) (MIT license)
+- [peewee](http://docs.peewee-orm.com/en/latest/) (MIT license)

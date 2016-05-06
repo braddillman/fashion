@@ -16,22 +16,7 @@ import yaml
 
 from . import fashionPortfolio
 from . import xforms
-
-
-
-class cd:
-    '''Context manager for changing the current working directory'''
-    def __init__(self, newPath):
-        self.newPath = os.path.expanduser(newPath)
-
-    def __enter__(self):
-        self.savedPath = os.getcwd()
-        logging.debug("cd {0} -> {1}".format(self.savedPath, self.newPath))
-        os.chdir(self.newPath)
-
-    def __exit__(self, etype, value, traceback):
-        logging.debug("cd {1} -> {0}".format(self.savedPath, self.newPath))
-        os.chdir(self.savedPath)
+from . import xformUtil
 
 
 
@@ -56,7 +41,7 @@ class Library(object):
         '''Import all models in this library into the fashion database.'''
         modelGlobs = [g for g in self.globs if g['role'] == 3]
         # globs are specified relative to library file
-        with cd(os.path.dirname(self.filename)):
+        with xformUtil.cd(os.path.dirname(self.filename)):
             for g in modelGlobs:
                 recursive = g.get('recursive', True)
                 for f in glob.glob(g['glob'], recursive=recursive):
@@ -70,7 +55,7 @@ class Library(object):
         xfList = []
         xformGlobs = [g for g in self.globs if g['role'] == 4]
         # globs are specified relative to library file
-        with cd(os.path.dirname(self.filename)):
+        with xformUtil.cd(os.path.dirname(self.filename)):
             for g in xformGlobs:
                 recursive = g.get('recursive', True)
                 for f in glob.glob(g['glob'], recursive=recursive):
@@ -84,12 +69,21 @@ class Library(object):
         '''Get the directories which contain template files.'''
         templateGlobs = [g for g in self.globs if g['role'] == 2]
         # globs are specified relative to library file
-        with cd(os.path.dirname(self.filename)):
+        with xformUtil.cd(os.path.dirname(self.filename)):
             for g in templateGlobs:
                 recursive = g.get('recursive', True)
                 return [os.path.abspath(d) for d in glob.glob(g['glob'], recursive=recursive)
                                            if os.path.isdir(d) ]
                 
+    def getXformDirectories(self):
+        '''Get the directories which contain xform files.'''
+        xformGlobs = [g for g in self.globs if g['role'] == 4]
+        # globs are specified relative to library file
+        with xformUtil.cd(os.path.dirname(self.filename)):
+            for g in xformGlobs:
+                recursive = g.get('recursive', True)
+                return [os.path.abspath(d) for d in glob.glob(g['glob'], recursive=recursive)
+                                           if os.path.isdir(d) ]
             
         
         

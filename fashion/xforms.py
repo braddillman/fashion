@@ -62,10 +62,13 @@ class Xform():
 	def verify(self):
 		'''Verify the xform is well formed and could be executed.'''
 		if not hasattr(self.mod, 'inputKinds'):
+			logging.debug("missing inputKinds xform: {0}".format(self.modName))
 			return False
 		if not hasattr(self.mod, 'outputKinds'):
+			logging.debug("missing outputKinds xform: {0}".format(self.modName))
 			return False
 		if not hasattr(self.mod, 'xform'):
+			logging.debug("missing xform xform: {0}".format(self.modName))
 			return False
 		return True
 
@@ -78,7 +81,14 @@ class XformPlan(object):
 		
 	def plan(self):
 		'''Construction the xform execution plan.'''
-		self.goodXforms  = {xf for xf in self.xfSet if xf.verify()}
+		self.goodXforms = set()
+		for xf in self.xfSet:
+			logging.debug("verify xform: {0}".format(xf.modName))
+			if hasattr(xf, 'mod'):
+				if xf.verify():
+					self.goodXforms.add(xf)
+			else:
+				logging.debug("no module skipping xform: {0}".format(xf.modName))
 		self.badXforms   = self.xfSet - self.goodXforms
 		for xf in self.badXforms:
 			logging.warn("bad xform: {0}".format(xf.modName))

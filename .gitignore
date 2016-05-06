@@ -126,4 +126,12 @@ ENV/
 # Rope project settings
 .ropeproject
 
-
+# other stuff
+.project
+.pydevproject
+.settings/
+_build/
+bin/
+lib64
+pip-selfcheck.json
+pyvenv.cfg

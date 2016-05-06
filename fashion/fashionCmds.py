@@ -9,15 +9,17 @@ Command line parser for fashion project.
 '''
 
 import argparse
-import os
-import sys
-import shutil
 import logging
+import os
+import pathlib
+import shutil
+import sys
 
-from . import project
-from . import xforms
 from . import fashionPortfolio
+from . import project
 from . import templates
+from . import xforms
+from . import xformUtil
 
 alwaysYes = False
 
@@ -89,47 +91,57 @@ def xformCmd(args):
 
 def buildCmd(args):
     '''Perform a full build.'''
-    proj = project.Project(args.project)
+    proj = project.findProject(args.project)
     if proj.exists():
-        proj.init_db()
-        fashionPortfolio.clean()
-        proj.importModels()
-        xfs = proj.loadXforms()
-        plan = xforms.XformPlan(xfs)
-        plan.plan()
-        proj.loadTemplates()
-        templates.overwrite = args.force
-        plan.execute()
+        with xformUtil.cd(str(proj.projectPath)):
+            proj.init_db()
+            fashionPortfolio.clean()
+            proj.importModels()
+            xfs = proj.loadXforms()
+            plan = xforms.XformPlan(xfs)
+            plan.plan()
+            proj.loadTemplates()
+            templates.overwrite = args.force
+            plan.execute()
     else:
         print("project doesn't exist")
     
 def nabCmd(args):
-    '''Nab a file and turn it into a fashionTemplate + xform + genrec'''
-    proj = project.Project(args.directory)
-    targetFile = args.filename
-    rel = os.path.relpath(targetFile, str(proj.projPath))
+    '''Nab a file and turn it into a template + xform.'''
+    proj = project.findProject(args.project)
+    if proj.exists():
+        proj.init_db()
+        
+        targetFile = args.filename
+        relTarget = os.path.relpath(targetFile, str(proj.projectPath))
 
-    # back up file to mirror
-    mirrorDest = proj.projPath / 'fashion' / 'mirror' / rel
-    shutil.copyfile(targetFile, str(mirrorDest))
-
-    # create fashionTemplate by copying target file
-    templateDest = proj.projPath / 'fashion' / 'fashionTemplate' / rel
-    if os.path.exists(str(templateDest)):
-        print("Template already exists: " + str(templateDest))
-        return
-    shutil.copyfile(targetFile, str(templateDest))
-    print("Created fashionTemplate: " + str(templateDest))
-    
-    # create default model
-    modelDest = proj.projPath / 'fashion' / 'model' / rel
-    
-    # create xform
-    # create genrec
-
-def banCmd(args):
-    '''Undo a nab.'''
-    pass
+        # create template by copying target file
+        templateDir = proj.getLocalTemplateDir()
+        templateDest = os.path.join(templateDir, relTarget)
+        relTemplate = os.path.relpath(templateDest, str(templateDir))
+        if os.path.exists(str(templateDest)):
+            print("Template already exists: " + str(templateDest))
+            return
+        pathlib.Path(os.path.dirname(templateDest)).mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(targetFile, str(templateDest))
+        print("Created template: " + str(templateDest))
+        
+        # create a corresponding default xform
+        xfName = os.path.basename(os.path.splitext(targetFile)[0])
+        if args.name != None:
+            xfName = args.name
+        xfFilename = xfName + ".py"
+        xformDest = os.path.join(proj.getLocalXformDir(), os.path.dirname(relTarget), xfFilename)
+        model = { 'name'    : xfName,
+                  'template': relTemplate,
+                  'target'  : relTarget }
+        defaultXformTemplateFile = "defaultXform.py"
+        proj.loadTemplates()
+        templates.createDefaultFile(model, defaultXformTemplateFile, xformDest)
+        print("Created xform: " + str(xformDest))
+        
+    else:
+        print("project doesn't exist")    
 
 def versionCmd(args):
     '''Version of fashion'''
@@ -154,9 +166,7 @@ def main(args):
 
     nabParse = subparsers.add_parser('nab', help='nab a file and turn it into a fashionTemplate')
     nabParse.add_argument('filename', help='file to nab')
-
-    banParse = subparsers.add_parser('ban', help='ban a file and remove it from generation')
-    banParse.add_argument('filename', help='file to ban')
+    nabParse.add_argument('-n', '--name',   help='xform name', nargs=1)
 
     xformParse = subparsers.add_parser('xform', help='transform models')
     xformParse.add_argument('xformName', help='xform name')
@@ -184,7 +194,6 @@ def main(args):
     cmds = {
         "init": initCmd,
         "nab": nabCmd,
-        "ban": banCmd,
         "xform": xformCmd,
         "build": buildCmd,
         "kill": killCmd,
