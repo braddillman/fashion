@@ -12,9 +12,9 @@ The problem is managing a growing number ad hoc models, transformations and code
 
 The three-legged stool of fashion:
 
--A model is just a structured input file.
--A transform is just a simple script.
--A generator just substitutes values from a model into a template.
+- A model is just a structured input file.
+- A transform is just a simple script.
+- A generator just substitutes values from a model into a template.
 
 Fashion introduces a little structure, convention and metadata to make transformations and generators more managable. Python was selected as the language for transformation due to its' popularity and that no compilation step is required. Rather than introduce a new language for transformation, just learn python.
 
@@ -24,11 +24,14 @@ A model in fashion contains structured data, but no structure is prescribed. Typ
 
 ### Transforms
 
-A transform either:
-- reads 0 or more input models and produces 0 or more output models, or
-- reads 0 or more input models and generates 0 or more output files using 0 or more templates. (generation)
+A transform:
+- reads 0 or more input models,
+- produces 0 or more output models, (transformation)
+- generates 0 or more output files using 0 or more templates. (generation)
 
-"0 or more" means there is no requirement for a transform to produce output. "1 or more" is more typical.
+"0 or more" means there is no requirement for a transform to either read input produce output. "1 or more" is more typical.
+
+A single transform could do any combination of both transformation and generation. It is up to you to keep models and transform scripts at a size you decide is managable.
 
 ### Templates
 
@@ -310,3 +313,7 @@ The following python libraries are used:
 - [Mako templates](http://www.makotemplates.org/) (MIT license)
 - [PyYAML](http://pyyaml.org/) (MIT license) Soon to be replaced by [ruamel](https://bitbucket.org/ruamel/yaml)
 - [peewee](http://docs.peewee-orm.com/en/latest/) (MIT license)
+
+## The name
+
+Think of "fashion" as a verb, e.g. "I fashioned this code from this simple model."
