@@ -185,7 +185,7 @@ def create_xform(args):
     else:
         print("project doesn't exist")    
 
-def main(args):
+def main():
     '''Parse command from command line args, then delegate.'''
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', '--project',   help='project directory', nargs=1)
@@ -219,7 +219,7 @@ def main(args):
 
     versionParse = subparsers.add_parser('version', help='report version information')
 
-    result = parser.parse_args(args);
+    result = parser.parse_args(sys.argv[1:]);
     if result.project == None:
         result.project = os.getcwd()
         
