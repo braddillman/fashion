@@ -14,7 +14,7 @@ import glob
 import logging
 import os.path
 
-import yaml
+import ruamel.yaml
 
 from . import fashionPortfolio
 from . import xforms
@@ -94,9 +94,9 @@ class Library(object):
     def load(self):
         '''Load a library description file.'''
         with open(self.filename, "r") as stream:
-            self.globs = yaml.load(stream)
+            self.globs = ruamel.yaml.load(stream)
             
     def save(self):
         '''Save a library description file.'''
         with open(self.filename, "w") as stream:
-            yaml.dump(self.globs, stream, default_flow_style = False)
+            ruamel.yaml.dump(self.globs, stream, default_flow_style = False)

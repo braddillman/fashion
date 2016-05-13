@@ -25,12 +25,12 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name='fashion',
+    name='fashionModel',
 
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.1.0.dev1',
+    version='0.1.1.dev1',
 
     description='A utility for simple model transformation and source code generation',
     long_description=long_description,
@@ -61,7 +61,7 @@ setup(
         'Topic :: Software Development :: Build Tools',
 
         # Pick your license as you wish (should match "license" above)
-        'License :: OSI Approved :: Apache v2 License',
+        'License :: OSI Approved :: Apache Software License',
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
@@ -89,7 +89,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['Mako==1.0.4', 'peewee==2.8.0', 'PyYAML==3.11'],
+    install_requires=['Mako==1.0.4', 'peewee==2.8.0', 'ruamel.yaml==0.11.11', 'MarkupSafe==0.23'],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,

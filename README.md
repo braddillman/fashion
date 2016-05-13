@@ -48,11 +48,15 @@ Fashion is a straightforward python 3.5 application.
 ### prerequisites
 - install python 3.5+ 
 
-### install from github
-- TBD
+### install from pip
 
-### install from github pip
-- TBD
+Fashion is available from PyPi under the name fashionModel (fashion was already taken).
+
+	$ pip install fashionModel
+
+I got caught by the local cache and couldn't get a newer version. The solution was:
+
+	$ pip install --upgrade --no-cache-dir fashionModel
 
 ## Getting started
 

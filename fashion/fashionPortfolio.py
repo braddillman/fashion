@@ -11,9 +11,9 @@ import datetime
 import logging
 import os.path
 
-import yaml
 import peewee
 import playhouse.sqlite_ext
+import ruamel.yaml
 
 
 
@@ -81,11 +81,11 @@ class FashionFile(BaseModel):
         if self.role == 3: # model
             if self.fileFormat == 'yaml': 
                 if self.filename == None:
-                    self.model = yaml.load(self.content)
+                    self.model = ruamel.yaml.load(self.content)
                     return self.model
                 else:
                     with open(self.filename, 'r') as stream:
-                        self.model = yaml.load(stream)
+                        self.model = ruamel.yaml.load(stream)
                         return self.model
     
     def exists(self):
@@ -112,7 +112,7 @@ def importFile(**kwargs):
 def createModel(model, kind, fileFormat='yaml', filename=None):
     '''Create a new model with metadata.'''
     if fileFormat == 'yaml':
-        content = yaml.dump(model, default_flow_style = False)
+        content = ruamel.yaml.dump(model, default_flow_style = False)
     file = FashionFile.create(role=3, kind=kind, content=content, filename=filename, fileFormat=fileFormat)
     if filename != None:
         file.saveFile()
@@ -120,7 +120,7 @@ def createModel(model, kind, fileFormat='yaml', filename=None):
 
 def getProjectModel():
     '''Get the project model for this project.'''
-    pm = yaml.load(FashionFile.get(kind='fashion_project').content)
+    pm = ruamel.yaml.load(FashionFile.get(kind='fashion_project').content)
     logging.debug("pm={0}".format(pm))
     return pm
 
