@@ -302,6 +302,7 @@ Control these:
     + library.yaml  # library model for this fashion project
 
 Don't control these:
+
     fashion/
     + bak/      # backup files (not yet implemented)
     + mirror/   # copies of generated files to detect external modification
