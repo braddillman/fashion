@@ -20,6 +20,7 @@ from . import project
 from . import templates
 from . import xforms
 from . import xformUtil
+from fashion.project import FASHION_HOME
 
 alwaysYes = False
 
@@ -130,6 +131,10 @@ def nabCmd(args):
     else:
         print("project doesn't exist")    
 
+def infoCmd(args):
+    '''fashion install info'''
+    print("FASHION_HOME: {0}".format(str(FASHION_HOME)))
+    
 def versionCmd(args):
     '''Version of fashion'''
     print("version: unstable dev")
@@ -217,6 +222,7 @@ def main():
     createXformParse = subparsers.add_parser('create-xform', help='create a new xform')
     createXformParse.add_argument('filename', help='filename for new xform')
 
+    infoParse = subparsers.add_parser('info', help='report install information')
     versionParse = subparsers.add_parser('version', help='report version information')
 
     result = parser.parse_args(sys.argv[1:]);
@@ -237,6 +243,7 @@ def main():
         "nab": nabCmd,
         "build": buildCmd,
         "kill": killCmd,
+        "info": infoCmd,
         "version": versionCmd,
         "create-model": create_model,
         "create-xform": create_xform

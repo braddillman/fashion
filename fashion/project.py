@@ -24,7 +24,10 @@ from . import templates
 #
 # Get the FASHION_HOME directory.
 #
-FASHION_HOME  = pathlib.Path(os.path.join(os.path.dirname(__file__), os.pardir))
+#FASHION_HOME  = pathlib.Path(os.path.join(os.path.dirname(__file__), os.pardir))
+FASHION_HOME  = pathlib.Path(os.path.abspath(os.path.dirname(__file__)))
+
+
 
 class Project:
 	'''Represents a fashion user project.'''
@@ -56,7 +59,6 @@ class Project:
 		'''Create a new fashion project.'''
 		try:
 			# create the project model
-			print("FASHION_HOME={0}".format(FASHION_HOME))
 			projectModel = { 'projectPath'   : str(self.projectPath),
 							 'fashionPath'   : str(self.fashionPath),
 							 'fashionDbPath' : str(self.fashionDbPath),
