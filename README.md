@@ -212,6 +212,10 @@ Create `HelloWorld.java` with the content below:
 		}
 	}
 
+Now make that into a generated file:
+
+	$ fashion nab HelloWorld.java
+
 This creates a template `fashion/template/HelloWorld.java` and a transform `HelloWorld.py`. The new template is identical to the generation target `HelloWorld.java`, just waiting for template placeholders to be added. Now we can modify the transform and template to finish our generation work.
 
 Modify the template to look like:
@@ -264,6 +268,10 @@ Modify the transform to look like:
 	    # generate the file from the template and the model
 	    generate(model, "HelloWorld.java", "HelloWorld.java")
 
+Test the new transform.
+
+	$ fashion build
+
 The output file `HelloWorld.java` should look like:
 
 	public class HelloWorld {
@@ -312,6 +320,14 @@ Don't control these:
     + mirror/   # copies of generated files to detect external modification
     + tmplMods/ # mako compiles templates into python modules here
     + fashion.db    # sqlite3 database for fashions' file metadata
+
+## The project model
+
+What's in fashion.yaml? Coming soon.
+
+## Libraries
+
+What's in library.yaml? Coming soon.
 
 ## Dependencies
 The following python libraries are used:
