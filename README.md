@@ -216,7 +216,7 @@ Now make that into a generated file:
 
 	$ fashion nab HelloWorld.java
 
-This creates a template `fashion/template/HelloWorld.java` and a transform `HelloWorld.py`. The new template is identical to the generation target `HelloWorld.java`, just waiting for template placeholders to be added. Now we can modify the transform and template to finish our generation work.
+This creates a template `fashion/template/HelloWorld.java` and a transform `fashion/xform/HelloWorld.py`. The new template is identical to the generation target `HelloWorld.java`, just waiting for template placeholders to be added. Now we can modify the transform and template to finish our generation work.
 
 Modify the template to look like:
 
