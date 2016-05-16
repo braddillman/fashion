@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>Fashion by braddillman</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">Fashion</h1>
+      <h2 class="project-tagline">A utility for simple model transformation and source code generation.</h2>
+      <a href="https://github.com/braddillman/fashion" class="btn">View on GitHub</a>
+      <a href="https://github.com/braddillman/fashion/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/braddillman/fashion/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <h1>
+<a id="fashion" class="anchor" href="#fashion" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Fashion</h1>
+
+<p>Fashion is a command line utility for simple model transformation and source code generation, aimed at a target audience of developers.</p>
+
+<h2>
+<a id="the-problem" class="anchor" href="#the-problem" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>The problem</h2>
+
+<p>It only takes a few lines of code and a template library to throw together an ad hoc code generator. Many languages are suitable for writing transforms and generators. Models need not be complicated, or in strict formats like UML or MOF, be graphical, or even be usable by non-developers.</p>
+
+<p>The problem is managing a growing number ad hoc models, transformations and code generators - and their dependencies.</p>
+
+<h2>
+<a id="the-fashion-solution" class="anchor" href="#the-fashion-solution" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>The fashion solution</h2>
+
+<p>The three-legged stool of fashion:</p>
+
+<ul>
+<li>A model is just a structured input file.</li>
+<li>A transform is just a simple script.</li>
+<li>A generator just substitutes values from a model into a template.</li>
+</ul>
+
+<p>Fashion introduces a little structure, convention and metadata to make transformations and generators more managable. Python was selected as the language for transformation due to its' popularity and that no compilation step is required. Rather than introduce a new language for transformation, just learn python.</p>
+
+<h3>
+<a id="models" class="anchor" href="#models" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Models</h3>
+
+<p>A model in fashion contains structured data, but no structure is prescribed. Typically a model resembles a key:value map like a python dictionary, but many structures are possible. A fashion model is not limited to UML or MOF-like formats. Fashion models are intended to be simple for developers to create, edit, diff and version control; they aren't intended to be used by non-developers.</p>
+
+<h3>
+<a id="transforms" class="anchor" href="#transforms" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Transforms</h3>
+
+<p>A transform:</p>
+
+<ul>
+<li>reads 0 or more input models,</li>
+<li>produces 0 or more output models, (transformation)</li>
+<li>generates 0 or more output files using 0 or more templates. (generation)</li>
+</ul>
+
+<p>"0 or more" means there is no requirement for a transform to either read input produce output. "1 or more" is more typical.</p>
+
+<p>A single transform could do any combination of both transformation and generation. It is up to you to keep models and transform scripts at a size you decide is managable.</p>
+
+<h3>
+<a id="templates" class="anchor" href="#templates" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Templates</h3>
+
+<p>A template is a <a href="http://www.makotemplates.org/">Mako template</a>, which could look very similar to a source code file written in some programming language, with placeholders and looping driectives (in Mako syntax). </p>
+
+<h3>
+<a id="hierarchy-of-models" class="anchor" href="#hierarchy-of-models" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Hierarchy of models</h3>
+
+<p>Note that templates are easier to read and contain less logic if the model they use is simple, and designed specifically for that template. A design intent of fashion is to use a hierarchy of simple models from very abstract, through more specific, to the final model which is specific to one template. </p>
+
+<h2>
+<a id="installation" class="anchor" href="#installation" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Installation</h2>
+
+<p>Fashion is a straightforward python 3.5 application. </p>
+
+<h3>
+<a id="prerequisites" class="anchor" href="#prerequisites" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>prerequisites</h3>
+
+<ul>
+<li>install python 3.5+ </li>
+</ul>
+
+<h3>
+<a id="install-from-pip" class="anchor" href="#install-from-pip" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>install from pip</h3>
+
+<p>Fashion is available from PyPi under the name fashionModel (fashion was already taken).</p>
+
+<pre><code>$ pip install fashionModel
+</code></pre>
+
+<p>I got caught by the local cache and couldn't get a newer version. The solution was:</p>
+
+<pre><code>$ pip install --upgrade --no-cache-dir fashionModel
+</code></pre>
+
+<h2>
+<a id="getting-started" class="anchor" href="#getting-started" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Getting started</h2>
+
+<p>Create a new directory for your target project.</p>
+
+<pre><code>$ mkdir greet
+$ cd greet
+</code></pre>
+
+<p>Set up fashion in this directory.</p>
+
+<pre><code>$ fashion init
+</code></pre>
+
+<p>This creates the subdirectory <code>fashion</code> and an empty fashion project.</p>
+
+<p>A fashion model is just a structured data file, typically in yaml format. Other formats are possible (e.g. json, xml, csv, ini, etc.). Any format is possible - as long as the transforms which use the model can parse it.</p>
+
+<p>Create a simple model of kind 'greeting' in yaml format.</p>
+
+<pre><code>$ fashion create-model hellos.yaml greeting
+</code></pre>
+
+<p>This creates the file <code>fashion/model/hellos.yaml</code>.</p>
+
+<p>Edit the new model file. Initially it looks like:</p>
+
+<pre><code># default empty yaml file
+</code></pre>
+
+<p>Add a list of greetings similar to hello, so that <code>hellos.yaml</code> looks like:</p>
+
+<pre><code># List of words meaning hello
+- Hello
+- Hallo
+- Bonjour
+</code></pre>
+
+<p>Transforms are just python modules which strictly follow certain conventions, such as having functions with specific, pre-determined names. Otherwise, transforms can contain any legal python code, and dependencies (assuming the dependencies are properly installed and located, documentation coming soon).</p>
+
+<p>Now create a transform to change this model into an output source file.</p>
+
+<pre><code>$ fashion create-xform greetWorld
+</code></pre>
+
+<p>The empty transform should look like this:</p>
+
+<pre><code>'''
+greetWorld xform.
+'''
+
+import logging
+
+from fashion.xformUtil import readModels
+from fashion.xformUtil import generate
+
+def inputKinds():
+    '''Inputs consumed by this xform'''
+    return [ ]
+
+def outputKinds():
+    '''Outputs generated by this xform'''
+    return [ 'fashion_gen' ]
+
+def police():
+    '''Validate input combinations.'''
+    pass
+
+def xform():
+    '''Generate many source files from 2 input models.'''
+    logging.debug("greetWorld xform running")
+
+    model = {  }
+
+    generate(model, "myTemplate", "myTarget")    
+</code></pre>
+
+<p>Edit the transform to look like this:</p>
+
+<pre><code>'''
+greetWorld xform.
+'''
+
+import logging
+
+from fashion.xformUtil import readModels
+from fashion.xformUtil import generate
+
+def inputKinds():
+    '''Input kinds consumed by this xform'''
+    return [ 'greeting' ]
+
+def outputKinds():
+    '''Output kinds generated by this xform'''
+    return [ 'fashion_gen' ]
+
+def police(greeting):
+    '''Validate input combinations.'''
+    pass
+
+# xform argument names must match input kinds exactly, but order not significant 
+def xform(greeting):
+    '''Generate source files input models.'''
+    logging.debug("greetWorld xform running")
+
+    # read all the greeting input models
+    # since each input model is a list, flatten=True 
+    # changes list of lists [[],[], ...] into a flat list []
+    greetings = readModels(greeting, flatten=True)
+    # greetings should be ['Hello', 'Hallo', 'Bonjour']
+
+    # create the model handed to the template
+    model = { 'greetings': greetings }
+
+    # generate the file from the template and the model
+    generate(model, "greetWorld_template.c", "greetWorld.c")
+</code></pre>
+
+<p>Templates are implemented by <a href="http://www.makotemplates.org/">Mako</a>. For details of template syntax, refer to the Mako documentation.</p>
+
+<p>Create the template file fashion/template/greetWorld_template.c</p>
+
+<pre><code>/* greetWorld.c */
+
+#include &lt;stdio.h&gt;
+
+main() {
+% for greet in greetings:
+    printf("${greet} world!\n");
+% endfor
+}
+</code></pre>
+
+<p>Now run the fashion <code>build</code> command, which executes all the transforms.</p>
+
+<pre><code>$ fashion build
+</code></pre>
+
+<p>This should produce the file greetWorld.c which looks like;</p>
+
+<pre><code>/* greetWorld.c */
+
+#include &lt;stdio.h&gt;
+
+main() {
+    printf("Hello world!\n");
+    printf("Hallo world!\n");
+    printf("Bonjour world!\n");
+}
+</code></pre>
+
+<h3>
+<a id="nab-command" class="anchor" href="#nab-command" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>nab command</h3>
+
+<p>Next, let's try to reverse engineer an existing file into a transform and template using the fashion 'nab' command.</p>
+
+<p>If you were introducing fashion into an existing project, you'd expect there would already be existing source files. We'll create a file, and pretend this file already existed before we did <code>fashion init</code>.</p>
+
+<p>Create <code>HelloWorld.java</code> with the content below:</p>
+
+<pre><code>public class HelloWorld {
+
+    public static void main(String[] args) {
+        System.out.println("Hello, world!");
+    }
+}
+</code></pre>
+
+<p>Now make that into a generated file:</p>
+
+<pre><code>$ fashion nab HelloWorld.java
+</code></pre>
+
+<p>This creates a template <code>fashion/template/HelloWorld.java</code> and a transform <code>fashion/xform/HelloWorld.py</code>. The new template is identical to the generation target <code>HelloWorld.java</code>, just waiting for template placeholders to be added. Now we can modify the transform and template to finish our generation work.</p>
+
+<p>Modify the template to look like:</p>
+
+<pre><code>public class HelloWorld {
+
+    public static void main(String[] args) {
+% for greet in greetings:
+        System.out.println("${greet}, world!");
+% endfor
+    }
+}
+</code></pre>
+
+<p>Modify the transform to look like:</p>
+
+<pre><code>'''
+HelloWorld xform.
+'''
+
+import logging
+
+from fashion.xformUtil import readModels
+from fashion.xformUtil import generate
+
+def inputKinds():
+    '''Input kinds consumed by this xform'''
+    return [ 'greeting' ]
+
+def outputKinds():
+    '''Output kinds generated by this xform'''
+    return [ 'fashion_gen' ]
+
+def police(greeting):
+    '''Validate input combinations.'''
+    pass
+
+def xform(greeting):
+    '''Generate source files input models.'''
+    logging.debug("HelloWorld xform running")
+
+    # read all the greeting input models
+    # since each input model is a list, flatten=True 
+    # changes list of lists [[],[], ...] into a flat list []
+    greetings = readModels(greeting, flatten=True)
+    # greetings should be ['Hello', 'Hallo', 'Bonjour']
+
+    # create the model handed to the template
+    model = { 'greetings': greetings }
+
+    # generate the file from the template and the model
+    generate(model, "HelloWorld.java", "HelloWorld.java")
+</code></pre>
+
+<p>Test the new transform.</p>
+
+<pre><code>$ fashion build
+</code></pre>
+
+<p>The output file <code>HelloWorld.java</code> should look like:</p>
+
+<pre><code>public class HelloWorld {
+
+    public static void main(String[] args) {
+        System.out.println("Hello, world!");
+        System.out.println("Hallo, world!");
+        System.out.println("Bonjour, world!");
+    }
+}
+</code></pre>
+
+<p>So now we have source files in two languages generated from a common model.</p>
+
+<h2>
+<a id="directory-structure" class="anchor" href="#directory-structure" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Directory structure</h2>
+
+<p>Fashion creates a directory for itself under your project directory. Fashion is design to work within your existing project directory (as long as you don't already have a subdirectory named 'fashion'). The transformation and generation assets and metadata are stored under this directory.</p>
+
+<pre><code>fashion/
++ bak/      # backup files (not yet implemented)
++ mirror/   # copies of generated files to detect external modification
++ model/    # model files go here
++ template/ # template files go here
++ tmplMods/ # mako compiles templates into python modules here
++ xform/    # xforms (python modules) go here
++ fashion.yaml  # model for this fashion project
++ library.yaml  # library model for this fashion project
++ fashion.db    # sqlite3 database for fashions' file metadata
+</code></pre>
+
+<h3>
+<a id="version-control" class="anchor" href="#version-control" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>version control</h3>
+
+<p>It is recommended to store your transformation and generation assets in your source code version control system, but not everything under <code>fashion/</code> needs to be controlled.</p>
+
+<p>Control these:</p>
+
+<pre><code>fashion/
++ model/    # model files go here
++ template/ # template files go here
++ xform/    # xforms (python modules) go here
++ fashion.yaml  # model for this fashion project
++ library.yaml  # library model for this fashion project
+</code></pre>
+
+<p>Don't control these:</p>
+
+<pre><code>fashion/
++ bak/      # backup files (not yet implemented)
++ mirror/   # copies of generated files to detect external modification
++ tmplMods/ # mako compiles templates into python modules here
++ fashion.db    # sqlite3 database for fashions' file metadata
+</code></pre>
+
+<h2>
+<a id="the-project-model" class="anchor" href="#the-project-model" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>The project model</h2>
+
+<p>What's in fashion.yaml? Coming soon.</p>
+
+<h2>
+<a id="libraries" class="anchor" href="#libraries" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Libraries</h2>
+
+<p>What's in library.yaml? Coming soon.</p>
+
+<h2>
+<a id="dependencies" class="anchor" href="#dependencies" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Dependencies</h2>
+
+<p>The following python libraries are used:</p>
+
+<ul>
+<li>
+<a href="http://www.makotemplates.org/">Mako templates</a> (MIT license)</li>
+<li>
+<a href="http://pyyaml.org/">PyYAML</a> (MIT license) Soon to be replaced by <a href="https://bitbucket.org/ruamel/yaml">ruamel</a>
+</li>
+<li>
+<a href="http://docs.peewee-orm.com/en/latest/">peewee</a> (MIT license)</li>
+</ul>
+
+<h2>
+<a id="the-name" class="anchor" href="#the-name" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>The name</h2>
+
+<p>Think of "fashion" as a verb, e.g. "I fashioned this code from this simple model."</p>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/braddillman/fashion">Fashion</a> is maintained by <a href="https://github.com/braddillman">braddillman</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
