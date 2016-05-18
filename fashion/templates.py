@@ -46,8 +46,7 @@ def setDirectories(projDir=None, mirrorDir=None, templateDirs=None, moduleDir=No
     global projectDirectory
     projectDirectory = projDir
     mirrorDirectory = mirrorDir
-    print("------------------------------------------------------------")
-    print(str(templateDirs))
+    logging.debug(str(templateDirs))
     templateLookup = TemplateLookup(templateDirs, module_directory=moduleDir)
 
 def generateFile(model=None, templateFile=None, targetFile=None, **kwargs):
@@ -84,6 +83,7 @@ def generateFile(model=None, templateFile=None, targetFile=None, **kwargs):
     shutil.copy2(targetFile, mirrorFile)
     
 def createDefaultFile(model=None, templateFile=None, targetFile=None, **kwargs):
+    '''Create a default model, template, xform or other file.'''
     mytemplate = templateLookup.get_template(templateFile)
     pathlib.Path(os.path.dirname(targetFile)).mkdir(parents=True, exist_ok=True)
     with open(targetFile, 'w') as f:

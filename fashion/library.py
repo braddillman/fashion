@@ -75,7 +75,7 @@ class Library(object):
                 recursive = g.get('recursive', True)
                 for f in glob.glob(g['glob'], recursive=recursive):
                     xf = xforms.Xform(f)
-                    if xf.exists():
+                    if xf.exists() and not os.path.isdir(f):
                         xf.load()
                         xfList.extend([xf])
         return xfList

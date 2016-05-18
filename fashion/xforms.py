@@ -9,12 +9,14 @@ Describe and manipulate xforms, which are python3 modules with specific
 requirements.
 '''
 
-import os.path
 import importlib.util
-import logging
 import inspect
+import logging
+import os.path
+import traceback
 
 from . import fashionPortfolio
+from . import xformUtil
 
 
 
@@ -45,13 +47,30 @@ class Xform():
 				self.spec = importlib.util.spec_from_file_location(self.modName, self.filename)
 				self.mod = importlib.util.module_from_spec(self.spec)
 				self.spec.loader.exec_module(self.mod)
-				self.isLoaded = True
+				try:
+					self.outputKinds = self.mod.outputKinds()
+				except:
+					logging.error("outputKinds error: {0}".format(self.filename))
+					traceback.print_exc()
+					return False
+
 				func = self.mod.xform
-				self.args = inspect.getargspec(func).args
+				self.xform_args = inspect.getargspec(func).args
+				self.xformInputKinds = set(self.xform_args)
+				if hasattr(self.mod, 'police'):
+					func = self.mod.police
+					self.police_args = inspect.getargspec(func).args
+					self.policeInputKinds = set(self.police_args)
+					self.inputKinds = self.xformInputKinds | self.policeInputKinds
+					self.hasPolice = True
+				else:
+					self.inputKinds = self.xformInputKinds
+					self.hasPolice = False
+				self.isLoaded = True
 			except AttributeError:
 				logging.warning("Failed to load: {0}".format(self.filename))
 		return self.isLoaded
-		
+	
 	def exists(self):
 		'''
 		Tests for existence of this Xform.
@@ -59,18 +78,16 @@ class Xform():
 		'''
 		return os.path.exists(self.filename)
 	
-	def verify(self):
-		'''Verify the xform is well formed and could be executed.'''
-		if not hasattr(self.mod, 'inputKinds'):
-			logging.debug("missing inputKinds xform: {0}".format(self.modName))
-			return False
-		if not hasattr(self.mod, 'outputKinds'):
-			logging.debug("missing outputKinds xform: {0}".format(self.modName))
-			return False
-		if not hasattr(self.mod, 'xform'):
-			logging.debug("missing xform xform: {0}".format(self.modName))
-			return False
-		return True
+	def police(self, **inputs):
+		xformUtil.current_xform_name = self.filename
+		xformUtil.current_output_kinds = set() # no output for police
+		if hasattr(self.mod, 'police'):
+			return self.mod.police(**inputs)
+	
+	def execute(self, **inputs):
+		xformUtil.current_xform_name = self.filename
+		xformUtil.current_output_kinds = self.outputKinds
+		self.mod.xform(**inputs)
 
 
 
@@ -81,22 +98,15 @@ class XformPlan(object):
 		
 	def plan(self):
 		'''Construction the xform execution plan.'''
-		self.goodXforms = set()
-		for xf in self.xfSet:
-			logging.debug("verify xform: {0}".format(xf.modName))
-			if hasattr(xf, 'mod'):
-				if xf.verify():
-					self.goodXforms.add(xf)
-			else:
-				logging.debug("no module skipping xform: {0}".format(xf.modName))
+		self.goodXforms  = {xf for xf in self.xfSet if xf.isLoaded}
 		self.badXforms   = self.xfSet - self.goodXforms
 		for xf in self.badXforms:
-			logging.warn("bad xform: {0}".format(xf.modName))
+			logging.warn("bad xform: {0}".format(xf.filename))
 		self.xfByName    = {xf.modName:xf for xf in self.goodXforms}
 		self.xfNames     = set(self.xfByName)
 		
-		self.xfOutputs   = {xf.modName:set(xf.mod.outputKinds()) for xf in self.goodXforms}
-		self.xfInputs    = {xf.modName:set(xf.mod.inputKinds())  for xf in self.goodXforms}
+		self.xfOutputs   = {xf.modName:set(xf.outputKinds) for xf in self.goodXforms}
+		self.xfInputs    = {xf.modName:set(xf.inputKinds)  for xf in self.goodXforms}
 		
 		self.allOutputs  = {ok for _, outKinds in self.xfOutputs.items() 
 						       for ok in outKinds}
@@ -164,10 +174,23 @@ class XformPlan(object):
 		'''Execute all the xforms planned in self.execList.'''
 		for xfName in self.execList:
 			xf = self.xfByName[xfName]
-			# fetch inputs
-			inputs = {}
-			for inpKind in self.xfInputs[xfName]:
-				# fetch inp
-				inputs[inpKind] = fashionPortfolio.getModelFiles(inpKind)
-			xf.mod.police(**inputs)
-			xf.mod.xform(**inputs)
+			
+			if xf.hasPolice:
+				inputs = {inpKind:fashionPortfolio.getModelFiles(inpKind) 
+						  for inpKind in xf.policeInputKinds}
+				try:
+					if xf.police(**inputs):
+						# user verification failed
+						logging.error("aborting, police failed: {0}".format(xf.filename))
+						return
+				except:
+					logging.error("aborting, police error: {0}".format(xf.filename))
+					traceback.print_exc()
+				
+			inputs = {inpKind:fashionPortfolio.getModelFiles(inpKind) 
+					  for inpKind in xf.xformInputKinds}
+			try:
+				xf.execute(**inputs)
+			except:
+				logging.error("aborting, xform error: {0}".format(xf.filename))
+				traceback.print_exc()

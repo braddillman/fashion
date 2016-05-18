@@ -24,8 +24,7 @@ from . import templates
 #
 # Get the FASHION_HOME directory.
 #
-#FASHION_HOME  = pathlib.Path(os.path.join(os.path.dirname(__file__), os.pardir))
-FASHION_HOME  = pathlib.Path(os.path.abspath(os.path.dirname(__file__)))
+FASHION_HOME = pathlib.Path(os.path.abspath(os.path.dirname(__file__)))
 
 
 

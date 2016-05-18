@@ -131,12 +131,17 @@ def nabCmd(args):
     else:
         print("project doesn't exist")    
 
+def homeCmd(args):
+    '''fashion install home'''
+    print(str(FASHION_HOME))
+    
 def infoCmd(args):
     '''fashion install info'''
-    print("FASHION_HOME: {0}".format(str(FASHION_HOME)))
+    print("not implemented")
     
 def versionCmd(args):
     '''Version of fashion'''
+    print(str(FASHION_HOME))
     print("version: unstable dev")
     
 def create_model(args):
@@ -222,7 +227,8 @@ def main():
     createXformParse = subparsers.add_parser('create-xform', help='create a new xform')
     createXformParse.add_argument('filename', help='filename for new xform')
 
-    infoParse = subparsers.add_parser('info', help='report install information')
+    homeParse = subparsers.add_parser('home', help='report install directory')
+    infoParse = subparsers.add_parser('info', help='show info, not implemented')
     versionParse = subparsers.add_parser('version', help='report version information')
 
     result = parser.parse_args(sys.argv[1:]);
@@ -243,6 +249,7 @@ def main():
         "nab": nabCmd,
         "build": buildCmd,
         "kill": killCmd,
+        "home": homeCmd,
         "info": infoCmd,
         "version": versionCmd,
         "create-model": create_model,

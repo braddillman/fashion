@@ -6,26 +6,6 @@
 
 
 #
-# Greetings model
-#
-- fileFormat: yaml
-  glob: ./model/greetings.yaml
-  kind: fashion_greetings
-  recursive: false
-  role: 3
-  
-#
-# Planets model
-#
-- fileFormat: yaml
-  glob: ./model/planets.yaml
-  kind: fashion_planets
-  recursive: false
-  role: 3
-
-
-
-#
 # transforms
 #
 - fileFormat: python3

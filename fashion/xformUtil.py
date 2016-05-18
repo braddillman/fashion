@@ -13,7 +13,15 @@ import os.path
 
 from . import fashionPortfolio
 
+#
+# Name of current executing xform
+#
+current_xform_name = ""
 
+#
+# Set of current output kinds
+#
+current_output_kinds = set()
 
 class cd:
     '''Context manager for changing the current working directory'''
@@ -42,6 +50,8 @@ def readModels(modelFashionFiles, flatten=False):
     
 def writeModel(model=None, kind=None, fileFormat='yaml', filename=None):
     '''Write a single model.'''
+    if kind not in current_output_kinds:
+        logging.warn("xform {0} didn't declare output kind: {1}".format(current_xform_name, current_output_kinds))
     fashionPortfolio.createModel(model, kind, fileFormat, filename)
 
 def generate(model=None, templateFile=None, targetFile=None):
