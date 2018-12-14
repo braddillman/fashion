@@ -82,6 +82,7 @@ nosetests.xml
 coverage.xml
 *,cover
 .hypothesis/
+.pytest_cache/
 
 # Translations
 *.mo
@@ -119,6 +120,7 @@ celerybeat-schedule
 # virtualenv
 venv/
 ENV/
+Scripts/
 
 # Spyder project settings
 .spyderproject
@@ -135,3 +137,4 @@ bin/
 lib64
 pip-selfcheck.json
 pyvenv.cfg
+.vscode/
