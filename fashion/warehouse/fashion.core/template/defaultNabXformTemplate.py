@@ -86,3 +86,8 @@ class MyXform(object):
         logging.debug("{0} executing...".format(self.name))
 
         # xform code goes here.
+
+        model = {}
+        template = "{{ template }}"
+        targetFile = "{{ targetFile }}}"
+        mdb.generate(model, template, targetFile)

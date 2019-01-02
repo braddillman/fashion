@@ -34,12 +34,14 @@ class Runway(object):
         self.dba = dba
         self.warehouse = wh
 
-    def loadModules(self, tags=None):
+    def loadModules(self, verbose=False, tags=None):
         '''Load all xform module code.'''
         self.moduleDefs = self.warehouse.getModuleDefinitions(tags)
         for modName, modDef in self.moduleDefs.items():
             # TODO: insert record for defined module
             with cd(modDef.absDirname):
+                if verbose:
+                    print("Loading {0}".format(modDef.moduleName))
                 mod = XformModule(modDef)
                 if mod.loadModuleCode():
                     self.modules[modName] = mod
@@ -53,18 +55,23 @@ class Runway(object):
             with cd(schDef.absDirname):
                 self.schemaRepo.addFromDescription(schDef)
 
-    def initModules(self, tags=None):
+    def initModules(self, verbose=False, tags=None):
         '''Initialize modules from their configs.'''
         self.moduleCfgs = self.warehouse.getModuleConfigs(self.modules)
         for cfg in self.moduleCfgs:
             with cd(cfg.absDirname):
                 with ModelAccess(self.dba, self.schemaRepo, cfg) as mdb:
                     mod = self.modules[cfg.moduleName]
+                    if verbose:
+                        print("Initializing module {0}".format(
+                            mod.properties.moduleName))
                     xfObjs = mod.init(cfg, mdb, tags)
                     for xfo in xfObjs:
+                        if verbose:
+                            print("Created xform object {0}".format(xfo.name))
                         if xfo.name in self.objects:
                             logging.error(
-                                "Duplicate object name: {0}".format(xfo.name))
+                                "Duplicate xform object name: {0}".format(xfo.name))
                         else:
                             # TODO: set up templatePath
                             if not hasattr(xfo, "templatePath"):
@@ -75,14 +82,14 @@ class Runway(object):
     def initMirror(self, projDir, mirrorDir):
         '''Set a database singleton record with mirror info.'''
         ctx = Munch({"name": "fashion.core.runway",
-                     "inputKinds": [], "templatePath": [], 
+                     "inputKinds": [], "templatePath": [],
                      "outputKinds": ['fashion.core.mirror']})
         with ModelAccess(self.dba, self.schemaRepo, ctx) as mdb:
             mdb.setSingleton("fashion.core.mirror",
-                             {"projectPath": str(projDir), 
+                             {"projectPath": str(projDir),
                               "mirrorPath": str(mirrorDir)})
 
-    def plan(self):
+    def plan(self, verbose=False):
         '''Construction the xform execution plan.'''
         self.xfOutputs = {xf.name: set(xf.outputKinds)
                           for xf in self.objects.values()}
@@ -143,13 +150,15 @@ class Runway(object):
         for idx, xfName in enumerate(self.execList):
             logging.debug("{0}:{1}".format(idx, xfName))
 
-    def execute(self, tags=None):
+    def execute(self, verbose=False, tags=None):
         '''Execute all the xforms planned in self.execList.'''
         for xfName in self.execList:
             xfo = self.objects[xfName]
             try:
                 with ModelAccess(self.dba, self.schemaRepo, xfo) as mdb:
-                    xfo.execute(mdb, tags)
+                    if verbose:
+                        print("Executing {0}".format(xfo.name))
+                    xfo.execute(mdb, verbose, tags)
             except:
                 logging.error("aborting, xform error: {0}".format(xfName))
                 traceback.print_exc()

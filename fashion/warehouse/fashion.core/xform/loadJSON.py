@@ -16,7 +16,7 @@ from munch import munchify
 # Module level code is executed when this file is loaded.
 # cwd is where segment file was loaded.
 
-def init(moduleConfig, mdb, tags):
+def init(moduleConfig, mdb, verbose=False, tags=None):
     '''
     Create 1 LoadJSON object for each file.
     cwd is where segment file was loaded.
@@ -46,7 +46,7 @@ class LoadJSON(object):
         self.inputKinds = []
         self.outputKinds = [ self.config.kind ]
 
-    def execute(self, mdb, tags=None):
+    def execute(self, mdb, verbose=False, tags=None):
         '''
         Load the JSON file and insert it into the model database.
         cwd is project root.

@@ -8,17 +8,17 @@
     ],
     "xformModules": [
         {
-            "moduleName": "fashion.core.generate.jinja2",
+            "moduleName": "generate.jinja2",
             "filename": "./xform/generateJinja2.py", 
             "tags": [ "output" ]
         },
         {
-            "moduleName": "fashion.core.load.JSON",
+            "moduleName": "load.JSON",
             "filename": "./xform/loadJSON.py", 
             "tags": [ "input" ]
         },
         {
-            "moduleName": "fashion.core.load.XML",
+            "moduleName": "load.XML",
             "filename": "./xform/loadXML.py", 
             "tags": [ "input" ]
         }

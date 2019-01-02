@@ -67,6 +67,10 @@ def query_yes_no(question, default="yes"):
 
 
 def setup(args):
+    '''
+    Set up access to the portfolio.
+    :param args: arguments from argparse.
+    '''
     global portfolio
     portfolio = Portfolio(args.project)
     if not portfolio.exists():
@@ -109,23 +113,46 @@ def build(args):
         return
     print("building...")
     with cd(portfolio.projectPath):
-        r = portfolio.getRunway()
+        r = portfolio.getRunway(verbose=args.verbose)
         r.initMirror(portfolio.projectPath, portfolio.mirrorPath)
-        r.plan()
-        r.execute()
+        r.plan(verbose=args.verbose)
+        r.execute(verbose=args.verbose)
 
 
-def create(args):
+def createXform(args):
     global portfolio
     if not setup(args):
         return
-    print("creating new {0}...".format(args.element))
-    if args.element == 'xform':
-        tp = portfolio.warehouse.getDefaultsTemplatePath()
-        localSeg = portfolio.warehouse.loadSegment("local")
-        localSeg.createXform(args.name, tp)
-    else:
-        print("unknown element type '{0}'".format(args.element))
+    tp = portfolio.warehouse.getDefaultsTemplatePath()
+    localSeg = portfolio.warehouse.loadSegment("local")
+    localSeg.createXform(args.name, tp)
+
+
+def deleteXform(args):
+    global portfolio
+    if not setup(args):
+        return
+    tp = portfolio.warehouse.getDefaultsTemplatePath()
+    localSeg = portfolio.warehouse.loadSegment("local")
+    localSeg.deleteXform(args.name)
+
+
+def createTemplate(args):
+    global portfolio
+    if not setup(args):
+        return
+    tp = portfolio.warehouse.getDefaultsTemplatePath()
+    localSeg = portfolio.warehouse.loadSegment("local")
+    localSeg.createTemplate(args.name, tp)
+
+
+def deleteTemplate(args):
+    global portfolio
+    if not setup(args):
+        return
+    tp = portfolio.warehouse.getDefaultsTemplatePath()
+    localSeg = portfolio.warehouse.loadSegment("local")
+    localSeg.deleteTemplate(args.name)
 
 
 def guessSchema(args):
@@ -183,6 +210,16 @@ def segmentNew(args):
     portfolio.warehouse.newSegment(args.segname)
 
 
+def segmentDelete(args):
+    global portfolio
+    if not setup(args):
+        return
+    seg = portfolio.warehouse.loadSegment(args.segname)
+    if seg is not None:
+        if query_yes_no("Are you sure you want to delete the segment?", "no"):
+            portfolio.warehouse.deleteSegment(seg)
+
+
 def segmentExport(args):
     global portfolio
     if not setup(args):
@@ -213,14 +250,35 @@ def segmentImport(args):
     print("importing segment {0} v{1}".format(segname, version))
     portfolio.warehouse.importSegment(args.filename)
 
+def nab(args):
+    '''Create a template and xform from a file.'''
+    global portfolio
+    if not setup(args):
+        return
+    if not os.path.exists(args.filename):
+        print("{0} not found.".format(args.filename))
+        return
+    tp = portfolio.warehouse.getDefaultsTemplatePath()
+    localSeg = portfolio.warehouse.loadSegment("local")
+    xformName = os.path.splitext(os.path.basename(args.filename))[0]
+    model = {
+        "template": args.filename,
+        "targetFile": args.filename
+    }
+    tplFile = "defaultNabXformTemplate.py"
+    if localSeg.templateExists(args.filename):
+        if query_yes_no("Are you sure you want to overwrite the template?", "no"):
+            localSeg.deleteTemplate(args.filename)
+        else:
+            return
 
-# TODO: nab command
-
-# TODO: pojo segment
-# TODO: pocppo segment
-# TODO: pocso segment
-# TODO: SISO segment (HLA, DIS)
-
+    if localSeg.xformExists(xformName):
+        if query_yes_no("Are you sure you want to overwrite the xform?", "no"):
+            localSeg.deleteXform(args.filename)
+        else:
+            return
+    localSeg.createTemplate(args.filename)
+    localSeg.createXform(xformName, tp, templateFile=tplFile, model=model)
 
 def main():
     '''Parse command from command line args, then delegate.'''
@@ -257,15 +315,47 @@ def main():
 
     createParser = subparsers.add_parser(
         'create', help='create a default xform, schema, model, etc.')
-    createParser.add_argument(
-        'element', help='element type: xform, schema, model, template')
-    createParser.add_argument('name',    help='name of new element')
-    createParser.set_defaults(func=create)
+    createSubParser = createParser.add_subparsers(dest='createCommand',
+                                                  title='create subcommands',
+                                                  description='valid create subcommands',
+                                                  help='create subcommand help')
+
+    createXformParser = createSubParser.add_parser(
+        'xform', help='create a new xform')
+    createXformParser.add_argument('name', help='xform name')
+    createXformParser.set_defaults(func=createXform)
+
+    createTemplateParser = createSubParser.add_parser(
+        'template', help='create a new template')
+    createTemplateParser.add_argument('name', help='xform name')
+    createTemplateParser.set_defaults(func=createTemplate)
+
+    deleteParser = subparsers.add_parser(
+        'delete', help='delete an xform, schema, model, etc.')
+    deleteSubParser = deleteParser.add_subparsers(dest='deleteCommand',
+                                                  title='delete subcommands',
+                                                  description='valid delete subcommands',
+                                                  help='delete subcommand help')
+
+    deleteXformParser = deleteSubParser.add_parser(
+        'xform', help='delete an xform')
+    deleteXformParser.add_argument('name', help='xform name')
+    deleteXformParser.set_defaults(func=deleteXform)
+
+    deleteTemplateParser = deleteSubParser.add_parser(
+        'template', help='delete a template')
+    deleteTemplateParser.add_argument('name', help='template name')
+    deleteTemplateParser.set_defaults(func=deleteTemplate)
 
     guessSchemaParser = subparsers.add_parser(
         'guess_schema', help='create a default schema for a model kind')
     guessSchemaParser.add_argument('kind', help='kind of model for schema')
     guessSchemaParser.set_defaults(func=guessSchema)
+
+    nabParser = subparsers.add_parser(
+        'nab', help='create template and xform from existing file')
+    nabParser.add_argument('filename', help='file to nab')
+    nabParser.set_defaults(func=nab)
 
     dumpParser = subparsers.add_parser(
         'dump', help='print model contents')
@@ -284,6 +374,7 @@ def main():
                                                     title='segment subcommands',
                                                     description='valid segment subcommands',
                                                     help='segment subcommand help')
+
     segmentListParser = segmentSubParser.add_parser(
         'list', help='list segments')
     segmentListParser.set_defaults(func=segmentList)
@@ -302,6 +393,11 @@ def main():
     segmentNewParser.add_argument(
         'segname', help='name of new segment')
     segmentNewParser.set_defaults(func=segmentNew)
+    segmentDeleteParser = segmentSubParser.add_parser(
+        'delete', help='create a new segment')
+    segmentDeleteParser.add_argument(
+        'segname', help='name of segment to delete')
+    segmentDeleteParser.set_defaults(func=segmentDelete)
 
     result = parser.parse_args(sys.argv[1:])
     if result.project == None:

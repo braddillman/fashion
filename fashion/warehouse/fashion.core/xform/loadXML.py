@@ -20,7 +20,7 @@ from munch import munchify
 # cwd is where segment file was loaded.
 
 
-def init(moduleConfig, mdb, tags):
+def init(moduleConfig, mdb, verbose=False, tags=None):
     '''
     Create 1 LoadXML object for each file.
     cwd is where segment file was loaded.
@@ -51,7 +51,7 @@ class LoadXML(object):
         self.inputKinds = []
         self.outputKinds = [self.config.kind]
 
-    def execute(self, mdb, tags=None):
+    def execute(self, mdb, verbose=False, tags=None):
         '''
         Load the JSON file and insert it into the model database.
         cwd is project root.

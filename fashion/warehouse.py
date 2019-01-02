@@ -132,7 +132,9 @@ class Warehouse(object):
                             mod.templatePath = [os.path.abspath(
                                 p) for p in mod.templatePath]
                         mod.absDirname = seg.absDirname
-                        modDefs[m.moduleName] = mod
+                        mod.moduleRootName = m.moduleName
+                        mod.moduleName = seg.properties.name + '.' + m.moduleName
+                        modDefs[mod.moduleName] = mod
         return modDefs
 
     def getModuleConfigs(self, moduleDict):

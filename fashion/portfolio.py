@@ -18,6 +18,7 @@ from munch import Munch, munchify
 
 from fashion.databaseAccess import DatabaseAccess
 from fashion.mirror import Mirror
+from fashion.modelAccess import ModelAccess
 from fashion.runway import Runway
 from fashion.segment import Segment
 from fashion.util import cd
@@ -47,7 +48,6 @@ class Portfolio(object):
             str(self.warehousePath), 
             Warehouse(str(FASHION_WAREHOUSE_PATH)))
         self.mirrorPath = self.fashionPath / 'mirror'
-        self.mirror = Mirror(self.projectPath, self.mirrorPath)
         self.portfolioPath = self.fashionPath / 'portfolio.json'
         self.fashionDbPath = self.fashionPath / 'database.json'
         self.mirror = Mirror(self.projectPath, self.mirrorPath)
@@ -91,12 +91,12 @@ class Portfolio(object):
             dict = json.loads(fd.read())
             self.properties = munchify(dict)
 
-    def getRunway(self, tags=None):
+    def getRunway(self, verbose=False, tags=None):
         '''Get a Runway for this Portfolio.'''
         self.warehouse.loadSegments()
         r = Runway(self.db, self.warehouse)
-        r.loadModules()
-        r.initModules()
+        r.loadModules(verbose=verbose)
+        r.initModules(verbose=verbose)
         return r
 
 

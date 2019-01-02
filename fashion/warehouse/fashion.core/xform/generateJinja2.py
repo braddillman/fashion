@@ -17,7 +17,7 @@ from fashion.mirror import Mirror
 # cwd is where segment file was loaded.
 
 
-def init(config, mdb, tags=None):
+def init(config, mdb, verbose=False, tags=None):
     '''cwd is where segment file was loaded.'''
     return [Generate(config)]
 
@@ -33,7 +33,7 @@ class Generate(object):
                            "fashion.core.mirror"]
         self.outputKinds = []
 
-    def execute(self, mdb, tags=None):
+    def execute(self, mdb, verbose=False, tags=None):
         '''cwd is project root directory.'''
         # set up  mirrored directories
         mirCfg = munchify(mdb.getSingleton("fashion.core.mirror"))

@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import pathlib
+import shutil
 
 from jinja2 import FileSystemLoader, Environment
 from jsonschema import validate
@@ -244,15 +245,15 @@ segmentSchema = {
 }
 
 
-def createDefaultXform(templatePath, targetFile):
+def createDefaultXform(templatePath, targetFile, templateFile="defaultXformTemplate.py", model={}):
     '''Create a default xform module file.'''
     if os.path.exists(targetFile):
         logging.error(
             "xform module file already exists: {0}".format(targetFile))
         return False
     env = Environment(loader=FileSystemLoader(templatePath))
-    template = env.get_template("defaultXformTemplate.py")
-    result = template.render({})
+    template = env.get_template(templateFile)
+    result = template.render(model)
     with open(str(targetFile), "w") as tf:
         tf.write(result)
     return True
@@ -340,27 +341,72 @@ class Segment(object):
             os.makedirs(str(p / "template"), exist_ok=True)
             os.makedirs(str(p / "xform"),    exist_ok=True)
 
-    def createXform(self, xformName, templatePath):
+    def xformExists(self, xformName):
+        '''Test if an xform exists.'''
+        filename = xformName + ".py"
+        targetFile = self.properties.defaultXformPath + '/' + filename
         with cd(self.absDirname):
-            moduleName = self.properties.name + "." + xformName
+            return os.path.exists(targetFile)
+        
+    def deleteXform(self, xformName):
+        '''Delete an xform'''
+        filename = xformName + ".py"
+        targetFile = self.properties.defaultXformPath + '/' + filename
+        with cd(self.absDirname):
+            if os.path.exists(targetFile):
+                os.remove(targetFile)
+        moduleName = xformName
+        modDefs = [x for x in self.properties.xformModules if x.moduleName != moduleName]
+        self.properties.xformModules = modDefs
+        moduleName = self.properties.name + "." + xformName
+        modCfgs = [x for x in self.properties.xformConfig if x.moduleName != moduleName]
+        self.properties.xformConfig = modCfgs
+        self.save()
+        
+    def createXform(self, xformName, templatePath, templateFile="defaultXformTemplate.py", model={}):
+        with cd(self.absDirname):
             filename = xformName + ".py"
             targetFile = self.properties.defaultXformPath + '/' + filename
-            if not createDefaultXform(templatePath, targetFile):
+            if not createDefaultXform(templatePath, targetFile, templateFile=templateFile, model=model):
                 print("Failed!")
             else:
                 self.properties.xformModules.append({
-                    "moduleName": moduleName,
+                    "moduleName": xformName,
                     "filename": targetFile,
                     "inputKinds": [],
                     "outputKinds": [],
                     "tags": []
                 })
                 self.properties.xformConfig.append({
-                    "moduleName": moduleName,
+                    "moduleName": self.properties.name + "." + xformName,
                     "parameters": {},
                     "tags": []
                 })
                 self.save()
+        return True
+
+    def templateExists(self, filename):
+        with cd(self.absDirname):
+            with cd(self.properties.defaultTemplatePath):
+                absDst = os.path.abspath(filename)
+        return os.path.exists(absDst)
+
+    def deleteTemplate(self, filename):
+        with cd(self.absDirname):
+            with cd(self.properties.defaultTemplatePath):
+                absDst = os.path.abspath(filename)
+        if os.path.exists(absDst):
+            os.remove(absDst)
+        return True
+
+    def createTemplate(self, filename):
+        '''Create a template from a file.'''
+        absFn =  os.path.abspath(filename)
+        with cd(self.absDirname):
+            with cd(self.properties.defaultTemplatePath):
+                absDst = os.path.abspath(filename)
+        shutil.copy(absFn, absDst)
+        return True
 
     def createSchema(self, kind, schema):
         filename = self.properties.defaultSchemaPath + "/" + kind + ".json"
