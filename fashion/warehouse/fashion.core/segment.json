@@ -1,0 +1,35 @@
+{
+    "name": "fashion.core",
+    "version": "1.0.0",
+    "description": "fashion core segment",
+    "templatePath": [ "./template" ],
+    "schema": [
+        {"kind":"fashion.core.generate.jinja2.spec", "filename":"./schema/generateJinja2.json"}
+    ],
+    "xformModules": [
+        {
+            "moduleName": "fashion.core.generate.jinja2",
+            "filename": "./xform/generateJinja2.py", 
+            "tags": [ "output" ]
+        },
+        {
+            "moduleName": "fashion.core.load.JSON",
+            "filename": "./xform/loadJSON.py", 
+            "tags": [ "input" ]
+        },
+        {
+            "moduleName": "fashion.core.load.XML",
+            "filename": "./xform/loadXML.py", 
+            "tags": [ "input" ]
+        }
+    ],
+    "xformConfig": [
+        {
+            "moduleName": "fashion.core.generate.jinja2",
+            "tags": [ "output" ],
+            "parameters": {}
+        }
+    ],
+    "segmentRefs": [],
+    "extraFiles": [ "./model/fashionPrime.json"]
+}

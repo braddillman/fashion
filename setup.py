@@ -1,7 +1,7 @@
 '''
-Created on 2016-05-02
+Created on 2018-12-26
 
-Copyright (c) 2016 Bradford Dillman
+Copyright (c) 2018 Bradford Dillman
 
 @author: bdillman
 
@@ -30,7 +30,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.1.6.dev1',
+    version='0.2.0.dev1',
 
     description='A utility for simple model transformation and source code generation',
     long_description=long_description,
@@ -90,22 +90,25 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['Mako==1.0.4', 'peewee==2.8.0', 'ruamel.yaml==0.11.11', 'MarkupSafe==0.23'],
+    install_requires=[
+        'tinydb==3.12.2', 'munch==2.3.2', 'jsonschema==2.6.0', 
+        'genson==1.0.2', 'xmltodict==0.11.0', 'Jinja2==2.10'
+    ],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
     # for example:
     # $ pip install -e .[dev,test]
     extras_require={
-        'dev': ['check-manifest'],
-        'test': ['coverage'],
+        'dev': ['check-manifest', 'pylint'],
+        'test': ['coverage', 'pytest'],
     },
 
     # If there are data files included in your packages that need to be
     # installed, specify them here.  If using Python 2.6 or less, then these
     # have to be included in MANIFEST.in as well.
-    package_data={ 'fashion': ['library.yaml', 'LICENSE.txt', 'README.md',
-                               'model/*', 'template/*', 'xform/*.py']},
+    package_data={ 'fashion': ['segment.json', 'LICENSE.txt', 'README.md',
+                               'model/*', 'schema/*', 'template/*', 'xform/*.py']},
 
     # Although 'package_data' is the preferred approach, in some case you may
     # need to place data files outside of your packages. See:

@@ -1,4 +1,10 @@
 tinydb==3.12.2
+munch==2.3.2
+Jinja2==2.10
+jsonschema==2.6.0
+genson==1.0.2
+ujson==1.35
 pylint==2.2.2
 pytest==4.0.2
-ujson==1.35
+coverage==4.5.2
+xmltodict==0.11.0
