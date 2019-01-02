@@ -79,7 +79,7 @@ class Runway(object):
                             self.objects[xfo.name] = xfo
                             # TODO: insert record for init'ed object
 
-    def initMirror(self, projDir, mirrorDir):
+    def initMirror(self, projDir, mirrorDir, force=False):
         '''Set a database singleton record with mirror info.'''
         ctx = Munch({"name": "fashion.core.runway",
                      "inputKinds": [], "templatePath": [],
@@ -87,7 +87,8 @@ class Runway(object):
         with ModelAccess(self.dba, self.schemaRepo, ctx) as mdb:
             mdb.setSingleton("fashion.core.mirror",
                              {"projectPath": str(projDir),
-                              "mirrorPath": str(mirrorDir)})
+                              "mirrorPath": str(mirrorDir),
+                              "force": force})
 
     def plan(self, verbose=False):
         '''Construction the xform execution plan.'''

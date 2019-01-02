@@ -65,8 +65,7 @@ class Portfolio(object):
             self.segments = {}
             self.properties = munchify({
                 "name": "fashion",
-                "defaultSegment": "local",
-                "segments": ["local"]
+                "defaultSegment": "local"
             })
             os.mkdir(str(self.fashionPath))
             os.mkdir(str(self.warehousePath))

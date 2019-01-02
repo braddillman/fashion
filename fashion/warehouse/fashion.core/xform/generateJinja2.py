@@ -37,7 +37,7 @@ class Generate(object):
         '''cwd is project root directory.'''
         # set up  mirrored directories
         mirCfg = munchify(mdb.getSingleton("fashion.core.mirror"))
-        mirror = Mirror(mirCfg.projectPath, mirCfg.mirrorPath)
+        mirror = Mirror(mirCfg.projectPath, mirCfg.mirrorPath, force=mirCfg.force)
         genSpecs = mdb.getByKind(self.inputKinds[0])
         for genSpec in genSpecs:
             gs = munchify(genSpec)

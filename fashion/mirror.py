@@ -16,10 +16,11 @@ from fashion.util import cd
 class Mirror(object):
     '''Mirror a directory in a second directory.'''
 
-    def __init__(self, projDir, mirrorDir):
+    def __init__(self, projDir, mirrorDir, force=False):
         '''Constructor.'''
         self.projDir = str(projDir)
         self.mirrorDir = str(mirrorDir)
+        self.force = force
 
     def getRelativePath(self, filename):
         '''Get path of filename relative to projDir.'''
@@ -38,6 +39,9 @@ class Mirror(object):
 
     def isChanged(self, filename):
         '''Compare file to mirrored file, return True if filename is strictly newer.'''
+        # Force overwrites by always returning no change.
+        if self.force:
+            return False
         mirFile = self.getMirrorPath(filename)
         if not os.path.exists(mirFile):
             return False

@@ -114,7 +114,8 @@ def build(args):
     print("building...")
     with cd(portfolio.projectPath):
         r = portfolio.getRunway(verbose=args.verbose)
-        r.initMirror(portfolio.projectPath, portfolio.mirrorPath)
+        r.initMirror(portfolio.projectPath,
+                     portfolio.mirrorPath, force=args.force)
         r.plan(verbose=args.verbose)
         r.execute(verbose=args.verbose)
 
@@ -250,6 +251,7 @@ def segmentImport(args):
     print("importing segment {0} v{1}".format(segname, version))
     portfolio.warehouse.importSegment(args.filename)
 
+
 def nab(args):
     '''Create a template and xform from a file.'''
     global portfolio
@@ -262,8 +264,8 @@ def nab(args):
     localSeg = portfolio.warehouse.loadSegment("local")
     xformName = os.path.splitext(os.path.basename(args.filename))[0]
     model = {
-        "template": args.filename,
-        "targetFile": args.filename
+        "template": os.path.basename(args.filename),
+        "targetFile": os.path.basename(args.filename)
     }
     tplFile = "defaultNabXformTemplate.py"
     if localSeg.templateExists(args.filename):
@@ -279,6 +281,7 @@ def nab(args):
             return
     localSeg.createTemplate(args.filename)
     localSeg.createXform(xformName, tp, templateFile=tplFile, model=model)
+
 
 def main():
     '''Parse command from command line args, then delegate.'''
@@ -311,6 +314,8 @@ def main():
 
     buildParser = subparsers.add_parser(
         'build', help='build the plan of xforms and generate output')
+    buildParser.add_argument('-f', '--force',
+                             help="force overwrite of generated files", action='store_true')
     buildParser.set_defaults(func=build)
 
     createParser = subparsers.add_parser(

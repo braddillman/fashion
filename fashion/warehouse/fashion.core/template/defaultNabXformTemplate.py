@@ -65,12 +65,9 @@ class MyXform(object):
         self.config = config
         self.tags = tags
 
-        # Default to the inputKinds and outputKinds specified in the config,
-        # or change them to anything. The config inputKinds and outputKinds
-        # only affect the ModelAccess mdb in the module init() above and
-        # this constructor.
-        self.inputKinds = config.inputKinds
-        self.outputKinds = config.outputKinds
+        # Set the inputKinds and outputKinds
+        self.inputKinds = []
+        self.outputKinds = [ "fashion.core.generate.jinja2.spec" ]
 
     def execute(self, mdb, verbose=False, tags=None):
         '''
@@ -89,5 +86,5 @@ class MyXform(object):
 
         model = {}
         template = "{{ template }}"
-        targetFile = "{{ targetFile }}}"
+        targetFile = "{{ targetFile }}"
         mdb.generate(model, template, targetFile)
