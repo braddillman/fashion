@@ -1,5 +1,7 @@
 import logging
 
+from pathlib import Path
+
 from fashion.portfolio import Portfolio
 from fashion.util import cd
 

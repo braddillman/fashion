@@ -5,12 +5,15 @@ from fashion.databaseAccess import DatabaseAccess
 from fashion.modelAccess import ModelAccess
 from fashion.schema import SchemaRepository
 
+
 class DummyContextOut(object):
 
     def __init__(self):
         self.name = "dummyContextOut"
         self.inputKinds = ["dummy.input"]
         self.outputKinds = ["dummy.output"]
+        self.templatePath = []
+
 
 class DummyContextIn(object):
 
@@ -18,6 +21,7 @@ class DummyContextIn(object):
         self.name = "dummyContextIn"
         self.inputKinds = ["dummy.output"]
         self.outputKinds = []
+        self.templatePath = []
 
 
 class TestModelAccess(object):
@@ -27,7 +31,7 @@ class TestModelAccess(object):
         d = DummyContextOut()
         schemaRepo = SchemaRepository()
         with ModelAccess(dba, schemaRepo, d) as mdb:
-            id = mdb.insert("dummy.output", {"name":"dummy model"})
+            id = mdb.insert("dummy.output", {"name": "dummy model"})
             assert id is not None
         ctxs = dba.table('fashion.model.context').all()
         assert len(ctxs) == 1
@@ -47,7 +51,7 @@ class TestModelAccess(object):
         d = DummyContextOut()
         schemaRepo = SchemaRepository()
         with ModelAccess(dba, schemaRepo, d) as mdb:
-            id = mdb.insert("dummy.output", {"name":"dummy model"})
+            id = mdb.insert("dummy.output", {"name": "dummy model"})
             assert id is not None
         ctxs = dba.table('fashion.model.context').all()
         assert len(ctxs) == 1
@@ -59,7 +63,7 @@ class TestModelAccess(object):
             assert len(ctxs) == 0
             models = dba.table('dummy.output').all()
             assert len(models) == 0
-            id = mdb.insert("dummy.output", {"name":"dummy model the second"})
+            id = mdb.insert("dummy.output", {"name": "dummy model the second"})
             assert id is not None
         ctxs = dba.table('fashion.model.context').all()
         assert len(ctxs) == 1
@@ -74,7 +78,7 @@ class TestModelAccess(object):
         dOut = DummyContextOut()
         schemaRepo = SchemaRepository()
         with ModelAccess(dba, schemaRepo, dOut) as mdb:
-            id = mdb.insert("dummy.output", {"name":"dummy model"})
+            id = mdb.insert("dummy.output", {"name": "dummy model"})
         dIn = DummyContextIn()
         with ModelAccess(dba, schemaRepo, dIn) as mdb:
             m = mdb.getById("dummy.output", id)

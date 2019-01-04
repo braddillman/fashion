@@ -44,6 +44,9 @@ class TestRunway(object):
         r.loadModules()
         r.initModules()
         r.plan()
+        mirrorDir = tmp_path / "mirror"
+        mirrorDir.mkdir()
+        r.initMirror(tmp_path, mirrorDir)
         r.execute()
 
     # def test_noPlan(self, tmp_path):

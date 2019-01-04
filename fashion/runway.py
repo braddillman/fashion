@@ -46,6 +46,9 @@ class Runway(object):
                 if mod.loadModuleCode():
                     self.modules[modName] = mod
                     # TODO: insert record for loaded module
+                else:
+                    # TODO: file not found, etc.
+                    pass
 
     def loadSchemas(self):
         '''Load all schemas from the warehouse.'''

@@ -10,9 +10,9 @@ A segment of fashion models, templates and xforms.
 
 import json
 import logging
-import os
-import pathlib
 import shutil
+
+from pathlib import Path
 
 from jinja2 import FileSystemLoader, Environment
 from jsonschema import validate
@@ -247,14 +247,18 @@ segmentSchema = {
 
 def createDefaultXform(templatePath, targetFile, templateFile="defaultXformTemplate.py", model={}):
     '''Create a default xform module file.'''
-    if os.path.exists(targetFile):
+    if targetFile.exists():
         logging.error(
             "xform module file already exists: {0}".format(targetFile))
         return False
     env = Environment(loader=FileSystemLoader(templatePath))
     template = env.get_template(templateFile)
     result = template.render(model)
-    with open(str(targetFile), "w") as tf:
+    try:
+        targetFile.makedir(parents=True, exist_ok=True)
+    except:
+        pass
+    with targetFile.open(mode="w") as tf:
         tf.write(result)
     return True
 
@@ -284,8 +288,8 @@ class Segment(object):
             "extraFiles": []
         })
         self.filename = filename
-        self.absFilename = os.path.abspath(self.filename)
-        self.absDirname = os.path.dirname(self.absFilename)
+        self.absFilename = self.filename.absolute()
+        self.absDirname = self.absFilename.parent
 
     @staticmethod
     def load(filename):
@@ -293,7 +297,7 @@ class Segment(object):
         Load a segment description from a JSON file.
         :param filename: the location of the segment JSON file.
         '''
-        with open(str(filename), 'r') as fd:
+        with filename.open(mode='r') as fd:
             segment = Segment(filename)
             segment.properties = munchify(json.loads(fd.read()))
             if "templatePath" not in segment.properties:
@@ -308,7 +312,7 @@ class Segment(object):
         :param segdir: the location of the segment JSON file.
         :param segname: the name of the segment.
         '''
-        newSeg = Segment(os.path.join(segdir, "segment.json"))
+        newSeg = Segment(segdir / "segment.json")
         newSeg.properties.name = segname
         newSeg.createDirectories()
         newSeg.save()
@@ -316,45 +320,41 @@ class Segment(object):
 
     def getAbsPath(self, filename):
         '''Translate filename relative to this segment.'''
-        absFn = filename
         with cd(self.absDirname):
-            absFn = os.path.abspath(absFn)
-        return absFn
+            return filename.absolute()
 
     def save(self):
         '''
         Save a segment description to a JSON file.
         '''
         self.validate()
-        with open(str(self.absFilename), "w") as sf:
+        with self.absFilename.open(mode="w") as sf:
             sf.write(self.properties.toJSON(indent=4))
 
     def createDirectories(self):
         '''
         Create default directories.
         '''
-        p = pathlib.Path(self.absDirname)
-        with cd(p):
-            os.makedirs(str(p),              exist_ok=True)
-            os.makedirs(str(p / "model"),    exist_ok=True)
-            os.makedirs(str(p / "schema"),   exist_ok=True)
-            os.makedirs(str(p / "template"), exist_ok=True)
-            os.makedirs(str(p / "xform"),    exist_ok=True)
+        self.absDirname.mkdir(parents=True, exist_ok=True)
+        (self.absDirname / "model").mkdir(parents=True, exist_ok=True)
+        (self.absDirname / "schema").mkdir(parents=True, exist_ok=True)
+        (self.absDirname / "template").mkdir(parents=True, exist_ok=True)
+        (self.absDirname / "xform").mkdir(parents=True, exist_ok=True)
 
     def xformExists(self, xformName):
         '''Test if an xform exists.'''
-        filename = xformName + ".py"
-        targetFile = self.properties.defaultXformPath + '/' + filename
+        filename = Path(xformName + ".py")
+        targetFile = Path(self.properties.defaultXformPath) / filename
         with cd(self.absDirname):
-            return os.path.exists(targetFile)
+            return targetFile.exists()
         
     def deleteXform(self, xformName):
         '''Delete an xform'''
-        filename = xformName + ".py"
-        targetFile = self.properties.defaultXformPath + '/' + filename
+        filename = Path(xformName + ".py")
+        targetFile = Path(self.properties.defaultXformPath) / filename
         with cd(self.absDirname):
-            if os.path.exists(targetFile):
-                os.remove(targetFile)
+            if targetFile.exists():
+               targetFile.unlink()
         moduleName = xformName
         modDefs = [x for x in self.properties.xformModules if x.moduleName != moduleName]
         self.properties.xformModules = modDefs
@@ -363,22 +363,24 @@ class Segment(object):
         self.properties.xformConfig = modCfgs
         self.save()
         
-    def createXform(self, xformName, templatePath, templateFile="defaultXformTemplate.py", model={}):
+    def createXform(self, xformName, templatePath, templateFile="defaultXformTemplate.py", model={}, moduleName=None):
         with cd(self.absDirname):
-            filename = xformName + ".py"
-            targetFile = self.properties.defaultXformPath + '/' + filename
+            filename = Path(xformName + ".py")
+            targetFile = Path(self.properties.defaultXformPath) / filename
+            if moduleName is None:
+                moduleName = filename.stem
             if not createDefaultXform(templatePath, targetFile, templateFile=templateFile, model=model):
                 print("Failed!")
             else:
                 self.properties.xformModules.append({
-                    "moduleName": xformName,
-                    "filename": targetFile,
+                    "moduleName": moduleName,
+                    "filename": targetFile.as_posix(),
                     "inputKinds": [],
                     "outputKinds": [],
                     "tags": []
                 })
                 self.properties.xformConfig.append({
-                    "moduleName": self.properties.name + "." + xformName,
+                    "moduleName": self.properties.name + "." + moduleName,
                     "parameters": {},
                     "tags": []
                 })
@@ -388,34 +390,38 @@ class Segment(object):
     def templateExists(self, filename):
         with cd(self.absDirname):
             with cd(self.properties.defaultTemplatePath):
-                absDst = os.path.abspath(filename)
-        return os.path.exists(absDst)
+                absDst = filename.absolute()
+        return absDst.exists()
 
     def deleteTemplate(self, filename):
         with cd(self.absDirname):
             with cd(self.properties.defaultTemplatePath):
-                absDst = os.path.abspath(filename)
-        if os.path.exists(absDst):
-            os.remove(absDst)
+                absDst = filename.absolute()
+        if absDst.exists():
+            absDst.unlink()
         return True
 
     def createTemplate(self, filename):
         '''Create a template from a file.'''
-        absFn =  os.path.abspath(filename)
+        absFn =  filename.absolute()
         with cd(self.absDirname):
             with cd(self.properties.defaultTemplatePath):
-                absDst = os.path.abspath(filename)
-        shutil.copy(absFn, absDst)
+                absDst = filename.absolute()
+        try:
+            absDst.parent.mkdir(parents=True, exist_ok=True)
+        except:
+            pass
+        shutil.copy(absFn.as_posix(), absDst.as_posix())
         return True
 
     def createSchema(self, kind, schema):
-        filename = self.properties.defaultSchemaPath + "/" + kind + ".json"
+        filename = Path(self.properties.defaultSchemaPath) / Path(kind + ".json")
         with cd(self.absDirname):
-            with open(filename, "w") as fp:
+            with filename.open(mode="w") as fp:
                 json.dump(schema, fp, indent=4)
         self.properties.schema.append({
             "kind": kind,
-            "filename": filename
+            "filename": str(filename)
         })
         self.save()
 

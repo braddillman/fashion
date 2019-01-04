@@ -11,15 +11,15 @@ Command line parser for fashion project.
 import argparse
 import json
 import logging
-import os
-import pathlib
 import shutil
 import sys
 import zipfile
 
+from pathlib import Path
+
 from munch import Munch
 
-from fashion.portfolio import FASHION_HOME, Portfolio
+from fashion.portfolio import FASHION_HOME, Portfolio, findPortfolio
 from fashion.runway import Runway
 from fashion.schema import SchemaRepository
 from fashion.util import cd
@@ -72,12 +72,17 @@ def setup(args):
     :param args: arguments from argparse.
     '''
     global portfolio
-    portfolio = Portfolio(args.project)
-    if not portfolio.exists():
-        print("No project found.")
-        return False
-    return True
+    portfolio = findPortfolio(Path(args.project))
+    return portfolio is not None
 
+def home(args):
+    '''Show FASHION_HOME directory.'''
+    print("FASHION_HOME={0}".format(FASHION_HOME))
+
+    global portfolio
+    if not setup(args):
+        return
+    print("project home={0}".format(str(portfolio.projectPath)))
 
 def init(args):
     '''Initialize a new fashion project.'''
@@ -98,12 +103,6 @@ def kill(args):
             portfolio.delete()
     else:
         print("project doesn't exist")
-
-
-def version(args):
-    '''Version of fashion'''
-    print(str(FASHION_HOME))
-    print("version: 0.2.0 unstable dev")
 
 
 def build(args):
@@ -142,18 +141,21 @@ def createTemplate(args):
     global portfolio
     if not setup(args):
         return
-    tp = portfolio.warehouse.getDefaultsTemplatePath()
-    localSeg = portfolio.warehouse.loadSegment("local")
-    localSeg.createTemplate(args.name, tp)
+    filename = portfolio.normalizeFilename(args.name)
+    with cd(portfolio.projectPath):
+        tp = portfolio.warehouse.getDefaultsTemplatePath()
+        localSeg = portfolio.warehouse.loadSegment("local")
+        localSeg.createTemplate(filename, tp)
 
 
 def deleteTemplate(args):
     global portfolio
     if not setup(args):
         return
-    tp = portfolio.warehouse.getDefaultsTemplatePath()
-    localSeg = portfolio.warehouse.loadSegment("local")
-    localSeg.deleteTemplate(args.name)
+    filename = portfolio.normalizeFilename(args.name)
+    with cd(portfolio.projectPath):
+        localSeg = portfolio.warehouse.loadSegment("local")
+        localSeg.deleteTemplate(filename)
 
 
 def guessSchema(args):
@@ -237,11 +239,12 @@ def segmentImport(args):
     global portfolio
     if not setup(args):
         return
-    if not os.path.exists(args.filename):
+    filepath = Path(args.filename)
+    if not filepath.exists():
         print("{0} not found.".format(args.filename))
         return
-    segname = os.path.basename(args.filename).split("_v")[0]
-    version = os.path.basename(args.filename).split("_v")[1].split(".zip")[0]
+    segname = filepath.name.split("_v")[0]
+    version = filepath.name.split("_v")[1].split(".zip")[0]
     seg = portfolio.warehouse.loadSegment(segname)
     if seg is not None:
         if query_yes_no("Are you sure you want to overwrite the segment?", "no"):
@@ -257,35 +260,37 @@ def nab(args):
     global portfolio
     if not setup(args):
         return
-    if not os.path.exists(args.filename):
-        print("{0} not found.".format(args.filename))
-        return
-    tp = portfolio.warehouse.getDefaultsTemplatePath()
-    localSeg = portfolio.warehouse.loadSegment("local")
-    xformName = os.path.splitext(os.path.basename(args.filename))[0]
-    model = {
-        "template": os.path.basename(args.filename),
-        "targetFile": os.path.basename(args.filename)
-    }
-    tplFile = "defaultNabXformTemplate.py"
-    if localSeg.templateExists(args.filename):
-        if query_yes_no("Are you sure you want to overwrite the template?", "no"):
-            localSeg.deleteTemplate(args.filename)
-        else:
+    filename = portfolio.normalizeFilename(args.filename)
+    with cd(portfolio.projectPath):
+        if not filename.exists():
+            print("{0} not found.".format(filename))
             return
+        tp = portfolio.warehouse.getDefaultsTemplatePath()
+        localSeg = portfolio.warehouse.loadSegment("local")
+        xformName = filename.stem
+        model = {
+            "template": filename.as_posix(),
+            "targetFile": filename.as_posix()
+        }
+        tplFile = "defaultNabXformTemplate.py"
+        if localSeg.templateExists(filename):
+            if query_yes_no("Are you sure you want to overwrite the template?", "no"):
+                localSeg.deleteTemplate(filename)
+            else:
+                return
 
-    if localSeg.xformExists(xformName):
-        if query_yes_no("Are you sure you want to overwrite the xform?", "no"):
-            localSeg.deleteXform(args.filename)
-        else:
-            return
-    localSeg.createTemplate(args.filename)
-    localSeg.createXform(xformName, tp, templateFile=tplFile, model=model)
+        if localSeg.xformExists(xformName):
+            if query_yes_no("Are you sure you want to overwrite the xform?", "no"):
+                localSeg.deleteXform(str(filename))
+            else:
+                return
+        localSeg.createTemplate(filename)
+        localSeg.createXform(xformName, tp, templateFile=tplFile, model=model)
 
 
 def main():
     '''Parse command from command line args, then delegate.'''
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(prog='fashion')
     parser.add_argument('-p', '--project',   help='project directory', nargs=1)
     parser.add_argument('-y', '--alwaysYes',
                         help="answer 'y' to all prompts", action='store_true')
@@ -293,12 +298,16 @@ def main():
                         help="verbose output", action='store_true')
     parser.add_argument('-d', '--debug',
                         help="debug logging", action='store_true')
+    parser.add_argument('--version', action='version', version='%(prog)s 2.0 beta')
 
     subparsers = parser.add_subparsers(dest='command',
                                        title='commands',
                                        description='valid commands',
-                                       help='command help',
-                                       prog='fashion')
+                                       help='command help')
+
+    homeParser = subparsers.add_parser(
+        'home', help='show FASHION_HOME directory')
+    homeParser.set_defaults(func=home)
 
     initParser = subparsers.add_parser(
         'init', help='initialize a new fashion project in current directory')
@@ -307,10 +316,6 @@ def main():
     killParser = subparsers.add_parser(
         'kill', help='delete all fashion contents from project directory')
     killParser.set_defaults(func=kill)
-
-    versionParser = subparsers.add_parser(
-        'version', help='display fashion version')
-    versionParser.set_defaults(func=version)
 
     buildParser = subparsers.add_parser(
         'build', help='build the plan of xforms and generate output')
@@ -406,7 +411,7 @@ def main():
 
     result = parser.parse_args(sys.argv[1:])
     if result.project == None:
-        result.project = os.getcwd()
+        result.project = Path.cwd()
 
     global alwaysYes
     if result.alwaysYes:
@@ -428,4 +433,4 @@ def main():
 # Main entry point
 #
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()

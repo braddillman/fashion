@@ -8,8 +8,9 @@ Copyright (c) 2018 Bradford Dillman
 Mirror a directory in a second directory.
 '''
 
-import os
 import shutil
+
+from pathlib import Path, PurePath
 
 from fashion.util import cd
 
@@ -18,24 +19,24 @@ class Mirror(object):
 
     def __init__(self, projDir, mirrorDir, force=False):
         '''Constructor.'''
-        self.projDir = str(projDir)
-        self.mirrorDir = str(mirrorDir)
+        self.projDir = projDir
+        self.mirrorDir = mirrorDir
         self.force = force
 
     def getRelativePath(self, filename):
         '''Get path of filename relative to projDir.'''
-        return os.path.relpath(filename, self.projDir)
+        return filename.relative_to(self.projDir)
 
     def getMirrorPath(self, filename):
         '''Get path to mirror file given for a filename.'''
-        return os.path.join(self.mirrorDir, self.getRelativePath(filename))
+        return PurePath.joinpath(self.mirrorDir, self.getRelativePath(filename.absolute()))
 
     def copyToMirror(self, filename):
         '''Copy a file to its mirror path.'''
         mirPath = self.getMirrorPath(filename)
-        destDir = os.path.dirname(mirPath)
-        os.makedirs(str(destDir), exist_ok=True)
-        shutil.copy2(filename, mirPath)
+        destDir = mirPath.parent
+        destDir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(str(filename), str(mirPath))
 
     def isChanged(self, filename):
         '''Compare file to mirrored file, return True if filename is strictly newer.'''
@@ -43,10 +44,10 @@ class Mirror(object):
         if self.force:
             return False
         mirFile = self.getMirrorPath(filename)
-        if not os.path.exists(mirFile):
+        if not mirFile.exists():
             return False
-        if not os.path.exists(filename):
+        if not filename.exists():
             return False
-        mirrTime = os.stat(mirFile).st_mtime
-        projTime = os.stat(filename).st_mtime
+        mirrTime = mirFile.stat().st_mtime
+        projTime = filename.stat().st_mtime
         return projTime > mirrTime

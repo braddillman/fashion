@@ -8,11 +8,11 @@ Copyright (c) 2018 Bradford Dillman
 Portfolio class describes a fashion user project.
 '''
 
-import os
 import shutil
 import logging
-import pathlib
 import json
+
+from pathlib import Path
 
 from munch import Munch, munchify
 
@@ -27,7 +27,7 @@ from fashion.warehouse import Warehouse
 #
 # Get the FASHION_HOME directory.
 #
-FASHION_HOME = pathlib.Path(os.path.abspath(os.path.dirname(__file__)))
+FASHION_HOME = Path(__file__).resolve().parent
 FASHION_WAREHOUSE_PATH = FASHION_HOME / "warehouse"
 
 
@@ -41,12 +41,11 @@ class Portfolio(object):
 
         :param str projDir: where the project is located. 
         '''
-        self.projectPath = pathlib.Path(str(projDir))
+        self.projectPath = projDir.absolute()
         self.fashionPath = self.projectPath / 'fashion'
         self.warehousePath = self.fashionPath / 'warehouse'
         self.warehouse = Warehouse(
-            str(self.warehousePath), 
-            Warehouse(str(FASHION_WAREHOUSE_PATH)))
+            self.warehousePath, Warehouse(FASHION_WAREHOUSE_PATH))
         self.mirrorPath = self.fashionPath / 'mirror'
         self.portfolioPath = self.fashionPath / 'portfolio.json'
         self.fashionDbPath = self.fashionPath / 'database.json'
@@ -67,8 +66,10 @@ class Portfolio(object):
                 "name": "fashion",
                 "defaultSegment": "local"
             })
-            os.mkdir(str(self.fashionPath))
-            os.mkdir(str(self.warehousePath))
+            # os.mkdir(str(self.fashionPath))
+            # os.mkdir(str(self.warehousePath))
+            self.fashionPath.mkdir(parents=True, exist_ok=True)
+            self.warehousePath.mkdir(parents=True, exist_ok=True)
             self.db = DatabaseAccess(self.fashionDbPath)
             self.warehouse.newSegment("local")
             self.save()
@@ -81,12 +82,12 @@ class Portfolio(object):
 
     def save(self):
         '''Save the portfolio.'''
-        with open(str(self.portfolioPath), "w") as pf:
+        with self.portfolioPath.open(mode="w") as pf:
             pf.write(self.properties.toJSON(sort_keys=True, indent=4))
 
     def load(self):
         '''Load a portfolio from a file.'''
-        with open(str(self.portfolioPath), 'r') as fd:
+        with self.portfolioPath.open(mode='r') as fd:
             dict = json.loads(fd.read())
             self.properties = munchify(dict)
 
@@ -98,9 +99,13 @@ class Portfolio(object):
         r.initModules(verbose=verbose)
         return r
 
+    def normalizeFilename(self, filename):
+        '''Convert filename to realtive to project directory.'''
+        fn = Path(filename).absolute()
+        return fn.relative_to(self.projectPath)
 
 
-def findPortfolio(startDir):
+def findPortfolio(startDir=Path.cwd()):
     '''
     Find the root directory of a project by searching recursively upwards.
 

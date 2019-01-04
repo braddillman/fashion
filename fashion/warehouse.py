@@ -14,6 +14,8 @@ import os
 import shutil
 import zipfile
 
+from pathlib import Path
+
 from genson import SchemaBuilder
 from munch import munchify
 
@@ -31,7 +33,7 @@ class Warehouse(object):
         :param dir: directory for segment subdirectories.
         :param fallback: another Warehouse to check for missing segments.
         '''
-        self.dir = os.path.abspath(str(dir))
+        self.dir = dir.absolute()
         self.fallback = fallback
         self.segmentCache = {}
 
@@ -40,7 +42,7 @@ class Warehouse(object):
         Return a list of segments in this warehouse.
         '''
         with cd(self.dir):
-            return [os.path.basename(d) for d in os.listdir(self.dir) if os.path.isdir(d)]
+            return [d.name for d in self.dir.iterdir() if d.is_dir()]
 
     def loadSegment(self, segname):
         '''
@@ -49,9 +51,9 @@ class Warehouse(object):
         '''
         if segname in self.segmentCache:
             return self.segmentCache[segname]
-        segfn = os.path.join(self.dir, segname, "segment.json")
+        segfn = self.dir / segname / "segment.json"
         seg = None
-        if os.path.exists(segfn):
+        if segfn.exists():
             seg = Segment.load(segfn)
         elif self.fallback is not None:
             seg = self.fallback.loadSegment(segname)
@@ -79,8 +81,8 @@ class Warehouse(object):
         if segname in self.listSegments():
             logging.error("segment {0} already exists".format(segname))
             return
-        segdir = os.path.join(self.dir, segname)
-        os.mkdir(segdir)
+        segdir = self.dir / segname
+        segdir.mkdir(parents=True, exist_ok=True)
         Segment.create(segdir, segname)
         self.loadSegment(segname)
 
@@ -88,7 +90,7 @@ class Warehouse(object):
         '''Export a segment to a zip file.'''
         seg = self.loadSegment(segname)
         exportName = segname + "_v" + seg.properties.version + ".zip"
-        dirName = os.path.abspath(os.path.join(seg.absDirname, ".."))
+        dirName = seg.absDirname.parent.resolve()
         with zipfile.ZipFile(exportName, mode='w') as zip:
             with cd(dirName):
                 for root, dirs, files in os.walk(segname):
@@ -129,8 +131,7 @@ class Warehouse(object):
                             else:
                                 mod.templatePath = []
                         with cd(seg.absDirname):
-                            mod.templatePath = [os.path.abspath(
-                                p) for p in mod.templatePath]
+                            mod.templatePath = [Path(p).absolute().as_posix() for p in mod.templatePath]
                         mod.absDirname = seg.absDirname
                         mod.moduleRootName = m.moduleName
                         mod.moduleName = seg.properties.name + '.' + m.moduleName
@@ -206,10 +207,10 @@ class Warehouse(object):
     def getDefaultsTemplatePath(self):
         '''Get the templatePath to search for default implementations.'''
         localSeg = self.loadSegment("local")
-        localPath = [localSeg.getAbsPath(p)
+        localPath = [str(localSeg.getAbsPath(Path(p)))
                      for p in localSeg.properties.templatePath]
         coreSeg = self.loadSegment("fashion.core")
-        corePath = [coreSeg.getAbsPath(p)
+        corePath = [str(coreSeg.getAbsPath(Path(p)))
                     for p in coreSeg.properties.templatePath]
         localPath.extend(corePath)
         return localPath

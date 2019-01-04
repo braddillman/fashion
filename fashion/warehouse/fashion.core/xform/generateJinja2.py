@@ -8,7 +8,10 @@ Generate code from a model and a jinja2 template.
 
 import logging
 
+from pathlib import Path
+
 from jinja2 import FileSystemLoader, Environment
+from jinja2.exceptions import TemplateNotFound
 from munch import munchify
 
 from fashion.mirror import Mirror
@@ -37,17 +40,21 @@ class Generate(object):
         '''cwd is project root directory.'''
         # set up  mirrored directories
         mirCfg = munchify(mdb.getSingleton("fashion.core.mirror"))
-        mirror = Mirror(mirCfg.projectPath, mirCfg.mirrorPath, force=mirCfg.force)
+        mirror = Mirror(Path(mirCfg.projectPath), Path(mirCfg.mirrorPath), force=mirCfg.force)
         genSpecs = mdb.getByKind(self.inputKinds[0])
         for genSpec in genSpecs:
             gs = munchify(genSpec)
 
-            if mirror.isChanged(gs.targetFile):
-                logging.error("Skipping {0}, file has changed.".format(gs.targetFile))
+            if mirror.isChanged(Path(gs.targetFile)):
+                logging.warning("Skipping {0}, file has changed.".format(gs.targetFile))
             else:
-                env = Environment(loader=FileSystemLoader(gs.templatePath))
-                template = env.get_template(gs.template)
-                result = template.render(gs.model)
-                with open(str(gs.targetFile), "w") as tf:
-                    tf.write(result)
-                mirror.copyToMirror(gs.targetFile)
+                try:
+                    env = Environment(loader=FileSystemLoader(gs.templatePath))
+                    template = env.get_template(gs.template)
+                    result = template.render(gs.model)
+                    targetPath = Path(gs.targetFile)
+                    with targetPath.open(mode="w") as tf:
+                        tf.write(result)
+                    mirror.copyToMirror(targetPath)
+                except TemplateNotFound:
+                    logging.error("TemplateNotFound: {0}".format(gs.template))

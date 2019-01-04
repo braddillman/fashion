@@ -48,6 +48,9 @@ class XformModule():
                 self.mod = importlib.util.module_from_spec(self.spec)
                 self.spec.loader.exec_module(self.mod)
                 self.isLoaded = True
+            except FileNotFoundError:
+                logging.error("FileNotFoundError: module {0} file {1}".format(
+                    self.properties.moduleName, self.properties.filename))
             except AttributeError:
                 logging.error("Failed to load module {0} from file {1}".format(
                     self.properties.moduleName, self.properties.filename))
