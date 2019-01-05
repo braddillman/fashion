@@ -1,11 +1,7 @@
 '''
-Created on 2016-04-29
-
-Copyright (c) 2016 Bradford Dillman
-
-@author: bdillman
-
 Command line parser for fashion project.
+
+Created on 2016-04-29 Copyright (c) 2016 Bradford Dillman
 '''
 
 import argparse
@@ -17,15 +13,17 @@ import zipfile
 
 from pathlib import Path
 
-from munch import Munch
+from munch import Munch, munchify
 
 from fashion.portfolio import FASHION_HOME, Portfolio, findPortfolio
 from fashion.runway import Runway
 from fashion.schema import SchemaRepository
 from fashion.util import cd
 
+# Tru means query_yes_no never prompts and always returns yes.
 alwaysYes = False
 
+# Current portfolio determined from working directory, if any found.
 portfolio = None
 
 
@@ -73,7 +71,15 @@ def setup(args):
     '''
     global portfolio
     portfolio = findPortfolio(Path(args.project))
-    return portfolio is not None
+    if portfolio is None:
+        return False
+    argsObj = munchify(vars(args))
+    del argsObj["func"]
+    argsObj.project = argsObj.project.as_posix()
+    portfolio.db.setSingleton('fashion.core.args', argsObj)
+    portfolio.db.setSingleton('fashion.core.portfolio', portfolio.properties)
+    return True
+
 
 def home(args):
     '''Show FASHION_HOME directory.'''
@@ -83,6 +89,7 @@ def home(args):
     if not setup(args):
         return
     print("project home={0}".format(str(portfolio.projectPath)))
+
 
 def init(args):
     '''Initialize a new fashion project.'''
@@ -105,6 +112,14 @@ def kill(args):
         print("project doesn't exist")
 
 
+def clean(args):
+    '''Build the output.'''
+    global portfolio
+    if not setup(args):
+        return
+    portfolio.db.db.purge_tables()
+
+
 def build(args):
     '''Build the output.'''
     global portfolio
@@ -112,11 +127,11 @@ def build(args):
         return
     print("building...")
     with cd(portfolio.projectPath):
-        r = portfolio.getRunway(verbose=args.verbose)
+        r = portfolio.getRunway()
         r.initMirror(portfolio.projectPath,
                      portfolio.mirrorPath, force=args.force)
-        r.plan(verbose=args.verbose)
-        r.execute(verbose=args.verbose)
+        r.plan()
+        r.execute()
 
 
 def createXform(args):
@@ -124,8 +139,8 @@ def createXform(args):
     if not setup(args):
         return
     tp = portfolio.warehouse.getDefaultsTemplatePath()
-    localSeg = portfolio.warehouse.loadSegment("local")
-    localSeg.createXform(args.name, tp)
+    seg = portfolio.defaultSegment()
+    seg.createXform(args.name, tp)
 
 
 def deleteXform(args):
@@ -133,8 +148,8 @@ def deleteXform(args):
     if not setup(args):
         return
     tp = portfolio.warehouse.getDefaultsTemplatePath()
-    localSeg = portfolio.warehouse.loadSegment("local")
-    localSeg.deleteXform(args.name)
+    seg = portfolio.defaultSegment()
+    seg.deleteXform(args.name)
 
 
 def createTemplate(args):
@@ -144,8 +159,8 @@ def createTemplate(args):
     filename = portfolio.normalizeFilename(args.name)
     with cd(portfolio.projectPath):
         tp = portfolio.warehouse.getDefaultsTemplatePath()
-        localSeg = portfolio.warehouse.loadSegment("local")
-        localSeg.createTemplate(filename, tp)
+        seg = portfolio.defaultSegment()
+        seg.createTemplate(filename, tp)
 
 
 def deleteTemplate(args):
@@ -154,8 +169,8 @@ def deleteTemplate(args):
         return
     filename = portfolio.normalizeFilename(args.name)
     with cd(portfolio.projectPath):
-        localSeg = portfolio.warehouse.loadSegment("local")
-        localSeg.deleteTemplate(filename)
+        seg = portfolio.defaultSegment()
+        seg.deleteTemplate(filename)
 
 
 def guessSchema(args):
@@ -168,6 +183,15 @@ def guessSchema(args):
         if not query_yes_no("Are you sure you want to overwrite the schema?", "no"):
             return
     portfolio.warehouse.guessSchema(portfolio.db, args.kind)
+
+
+def listKinds(args):
+    global portfolio
+    if not setup(args):
+        return
+    for t in sorted(portfolio.db.kinds()):
+        count = len(portfolio.db.table(t).all())
+        print("{0} ({1})".format(t, count))
 
 
 def dump(args):
@@ -255,6 +279,13 @@ def segmentImport(args):
     portfolio.warehouse.importSegment(args.filename)
 
 
+def segmentDefault(args):
+    global portfolio
+    if not setup(args):
+        return
+    portfolio.setDefaultSegment(args.name)
+
+
 def nab(args):
     '''Create a template and xform from a file.'''
     global portfolio
@@ -266,26 +297,26 @@ def nab(args):
             print("{0} not found.".format(filename))
             return
         tp = portfolio.warehouse.getDefaultsTemplatePath()
-        localSeg = portfolio.warehouse.loadSegment("local")
+        seg = portfolio.defaultSegment()
         xformName = filename.stem
         model = {
             "template": filename.as_posix(),
             "targetFile": filename.as_posix()
         }
         tplFile = "defaultNabXformTemplate.py"
-        if localSeg.templateExists(filename):
+        if seg.templateExists(filename):
             if query_yes_no("Are you sure you want to overwrite the template?", "no"):
-                localSeg.deleteTemplate(filename)
+                seg.deleteTemplate(filename)
             else:
                 return
 
-        if localSeg.xformExists(xformName):
+        if seg.xformExists(xformName):
             if query_yes_no("Are you sure you want to overwrite the xform?", "no"):
-                localSeg.deleteXform(str(filename))
+                seg.deleteXform(str(filename))
             else:
                 return
-        localSeg.createTemplate(filename)
-        localSeg.createXform(xformName, tp, templateFile=tplFile, model=model)
+        seg.createTemplate(filename)
+        seg.createXform(xformName, tp, templateFile=tplFile, model=model)
 
 
 def main():
@@ -298,7 +329,8 @@ def main():
                         help="verbose output", action='store_true')
     parser.add_argument('-d', '--debug',
                         help="debug logging", action='store_true')
-    parser.add_argument('--version', action='version', version='%(prog)s 2.0 beta')
+    parser.add_argument('--version', action='version',
+                        version='%(prog)s 2.0 beta')
 
     subparsers = parser.add_subparsers(dest='command',
                                        title='commands',
@@ -316,6 +348,14 @@ def main():
     killParser = subparsers.add_parser(
         'kill', help='delete all fashion contents from project directory')
     killParser.set_defaults(func=kill)
+
+    listKindsP = subparsers.add_parser(
+        'list_kinds', help='list all known model kinds')
+    listKindsP.set_defaults(func=listKinds)
+
+    cleanP = subparsers.add_parser(
+        'clean', help='clean tables from database')
+    cleanP.set_defaults(func=clean)
 
     buildParser = subparsers.add_parser(
         'build', help='build the plan of xforms and generate output')
@@ -408,6 +448,11 @@ def main():
     segmentDeleteParser.add_argument(
         'segname', help='name of segment to delete')
     segmentDeleteParser.set_defaults(func=segmentDelete)
+    segmentDefaultP = segmentSubParser.add_parser(
+        'default', help='set the default segment')
+    segmentDefaultP.add_argument(
+        'segname', help='name of default segment')
+    segmentDefaultP.set_defaults(func=segmentDefault)
 
     result = parser.parse_args(sys.argv[1:])
     if result.project == None:

@@ -1,11 +1,7 @@
 '''
-Created on 2018-12-19
-
-Copyright (c) 2018 Bradford Dillman
-
-@author: bdillman
-
 Various utilities for fashion.
+
+Created on 2018-12-19 Copyright (c) 2018 Bradford Dillman
 '''
 
 import logging

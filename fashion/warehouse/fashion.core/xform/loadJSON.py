@@ -44,7 +44,7 @@ class LoadJSON(object):
         self.name = moduleName + "::" + self.filename
         self.tags = [ "input" ]
         self.inputKinds = []
-        self.outputKinds = [ self.config.kind ]
+        self.outputKinds = [ self.config.kind, 'fashion.core.input.file' ]
 
     def execute(self, mdb, verbose=False, tags=None):
         '''
@@ -52,6 +52,7 @@ class LoadJSON(object):
         cwd is project root.
         '''
         with open(str(self.filename), 'r') as fd:
+            mdb.inputFile(str(self.filename))
             obj = munchify(json.loads(fd.read()))
             if self.config.isList == False:
                 mdb.insert(self.config.kind, obj)

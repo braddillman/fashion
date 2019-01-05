@@ -1,11 +1,9 @@
 '''
-Created on 2018-12-26
-
-Copyright (c) 2018 Bradford Dillman
-
-@author: bdillman
-
+Schema checking
+===================================
 Validates JSON objects.
+
+Created on 2018-12-26 Copyright (c) 2018 Bradford Dillman
 '''
 
 import copy
@@ -47,9 +45,11 @@ class SchemaRepository(object):
     def validate(self, kind, obj):
         '''
         Validate an object using the schema from this repository.
-        Raises jsonschema.ValidationError on failure.
+
         :param kind: the kind of object to validate.
         :param obj: the object to validate.
+
+        :raises: jsonschema.ValidationError on failure.
         '''
         if kind in self.schemaByKind:
             s = self.schemaByKind[kind]
@@ -57,15 +57,35 @@ class SchemaRepository(object):
                 s.validate(obj)
             except SchemaError:
                 logging.error(
-                    "Schema error for kind: {0}".format(self.config.name))
+                    "Schema error for kind: {0}".format(kind))
                 self.removeByKind(kind)
 
-    def addFromDescription(self, schemaConfig):
-        '''Create and add a Schema object from a schema description object.'''
+    def addFromDescription(self, schemaConfig, overwrite=False):
+        '''
+        Create and add a Schema object from a schema description object.
+
+        :param Schema schemaConfig: the configuration to add.
+        '''
+        if not overwrite and self.exists(schemaConfig.kind):
+            return
         s = Schema.load(schemaConfig)
         if schemaConfig.kind not in self.schemaByKind:
             self.schemaByKind[schemaConfig.kind] = s
 
     def removeByKind(self, kind):
-        '''Remove a schema for a kind.'''
+        '''
+        Remove a schema for a kind.
+
+        :param string kind: the model kind to remove.
+        '''
         self.schemaByKind[kind]
+
+    def exists(self, kind):
+        '''
+        Check if a schema exists for a model kind.
+
+        :param string kind: the model kind to test.
+        :returns: True if their is a schema for this model kind.
+        :rtype: boolean
+        '''
+        return kind in self.schemaByKind

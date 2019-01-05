@@ -1,11 +1,56 @@
 '''
-Created on 2018-12-16
+Segment - a package of resources
+===================================
 
-Copyright (c) 2018 Bradford Dillman
+A Segment is a package of related xforms, models, schemas and templates.
+Segments may be exported to, and imported from (correctly formatted) zipfiles.
+These segment packages make sharing fashion resources much simpler.
 
-@author: Bradford Dillman
+Segment directory layout
+-----------------------------------
+Segment directories are under:
 
-A segment of fashion models, templates and xforms.
+/fashion/warehouse/* - segment directories
+
+/fashion/warehouse/local/model - your model files go here, normally
+/fashion/warehouse/local/schema - your JSON schema files go here, normally
+/fashion/warehouse/local/template - your template files go here, normally
+/fashion/warehouse/local/xform - your Python xform modules go here, normally
+
+Segment.json structure
+-----------------------------------
+
+name: segment name
+
+version: segment version
+
+description: segment description
+
+templatePath: ordered list of strings, each item is a directory relative to the 
+segment directory. By default [ "./template" ] means look for templates in 
+'segment/template', e.g. './fashion/warehouse/local/template'
+
+schema: list of schema configurations, e.g.
+
+"schema": [
+    {"kind":"local.myModelKind", "filename":"./schema/myModelSchema.json"}
+]
+
+adds the JSON schema contained in the file:
+ "./fashion/warehouse/segmentname/schema/myModelSchema.json"
+
+ as a schema for models of kind "local.myModelKind"
+
+xform module definitions: a list of defintions of Python modules which 
+contain xform code, e.g. 
+
+"xformModules": [{
+    "moduleName": "generate.jinja2",
+    "filename": "./xform/generateJinja2.py", 
+    "tags": [ ]
+}]
+
+Created on 2018-12-16 Copyright (c) 2018 Bradford Dillman
 '''
 
 import json
@@ -246,7 +291,16 @@ segmentSchema = {
 
 
 def createDefaultXform(templatePath, targetFile, templateFile="defaultXformTemplate.py", model={}):
-    '''Create a default xform module file.'''
+    '''
+    Create a default xform module file.
+
+    :param list(string) templatePath: ordered list of search paths for template files.
+    :param Path targetFile: the xform module file to write.
+    :param string templateFile: the template to use to generate the xform code.
+    :param dictionary model: the model passed to the xform source code generator.
+    :returns: True if succeeded.
+    :rtype: boolean
+    '''
     if targetFile.exists():
         logging.error(
             "xform module file already exists: {0}".format(targetFile))
@@ -269,7 +323,8 @@ class Segment(object):
     def __init__(self, filename):
         '''
         Initialize a new local segment.
-        :param filename: the location of the segment JSON file.
+
+        :param Path filename: the segment JSON file.
         '''
         self.properties = munchify({
             "name": "local",
@@ -295,7 +350,10 @@ class Segment(object):
     def load(filename):
         '''
         Load a segment description from a JSON file.
-        :param filename: the location of the segment JSON file.
+
+        :param Path filename: the location of the segment JSON file.
+        :returns: the loaded Segment object.
+        :rtype: Segment object
         '''
         with filename.open(mode='r') as fd:
             segment = Segment(filename)
@@ -309,8 +367,11 @@ class Segment(object):
     def create(segdir, segname):
         '''
         Create a new segment.
-        :param segdir: the location of the segment JSON file.
-        :param segname: the name of the segment.
+
+        :param Path segdir: the location of the segment JSON file.
+        :param string segname: the name of the segment.
+        :returns: the created Segment object.
+        :rtype: Segment object
         '''
         newSeg = Segment(segdir / "segment.json")
         newSeg.properties.name = segname
@@ -319,7 +380,13 @@ class Segment(object):
         return newSeg
 
     def getAbsPath(self, filename):
-        '''Translate filename relative to this segment.'''
+        '''
+        Translate filename relative to this segment.
+
+        :param Path filename: the relative filename to translate.
+        :returns: the absolute path of the filename.
+        :rtype: Path
+        '''
         with cd(self.absDirname):
             return filename.absolute()
 
@@ -333,7 +400,7 @@ class Segment(object):
 
     def createDirectories(self):
         '''
-        Create default directories.
+        Create default directories for this segment.
         '''
         self.absDirname.mkdir(parents=True, exist_ok=True)
         (self.absDirname / "model").mkdir(parents=True, exist_ok=True)
@@ -342,28 +409,51 @@ class Segment(object):
         (self.absDirname / "xform").mkdir(parents=True, exist_ok=True)
 
     def xformExists(self, xformName):
-        '''Test if an xform exists.'''
+        '''
+        Test if an xform exists in this segment.
+
+        :param string xformName: name of xform to test.
+        :returns: True if xform exists.
+        :rtype: boolean
+        '''
         filename = Path(xformName + ".py")
         targetFile = Path(self.properties.defaultXformPath) / filename
         with cd(self.absDirname):
             return targetFile.exists()
-        
+
     def deleteXform(self, xformName):
-        '''Delete an xform'''
+        '''
+        Delete an xform from this segment.
+
+        :param string xformName: name of xform to delete.
+        '''
         filename = Path(xformName + ".py")
         targetFile = Path(self.properties.defaultXformPath) / filename
         with cd(self.absDirname):
             if targetFile.exists():
-               targetFile.unlink()
+                targetFile.unlink()
         moduleName = xformName
-        modDefs = [x for x in self.properties.xformModules if x.moduleName != moduleName]
+        modDefs = [
+            x for x in self.properties.xformModules if x.moduleName != moduleName]
         self.properties.xformModules = modDefs
         moduleName = self.properties.name + "." + xformName
-        modCfgs = [x for x in self.properties.xformConfig if x.moduleName != moduleName]
+        modCfgs = [
+            x for x in self.properties.xformConfig if x.moduleName != moduleName]
         self.properties.xformConfig = modCfgs
         self.save()
-        
+
     def createXform(self, xformName, templatePath, templateFile="defaultXformTemplate.py", model={}, moduleName=None):
+        '''
+        Create an xform module in this segment.
+
+        :param string xformName: name of xform to create.
+        :param list(string) templatePath: ordered list of search paths for template files.
+        :param string templateFile: the template to use to generate the xform code.
+        :param dictionary model: the model passed to the xform source code generator.
+        :param string moduleName: the moduleName for this xform module, else default is same as xformName.
+        :returns: True if succeeded.
+        :rtype: boolean
+        '''
         with cd(self.absDirname):
             filename = Path(xformName + ".py")
             targetFile = Path(self.properties.defaultXformPath) / filename
@@ -388,12 +478,26 @@ class Segment(object):
         return True
 
     def templateExists(self, filename):
+        '''
+        Test if a template exists in this segement.
+
+        :param Path filename: relative filename of template file.
+        :returns: True if exists.
+        :rtype: boolean
+        '''
         with cd(self.absDirname):
             with cd(self.properties.defaultTemplatePath):
                 absDst = filename.absolute()
         return absDst.exists()
 
     def deleteTemplate(self, filename):
+        '''
+        Delete a template from this segment.
+
+        :param Path filename: relative filename of template file.
+        :returns: True if success.
+        :rtype: boolean
+        '''
         with cd(self.absDirname):
             with cd(self.properties.defaultTemplatePath):
                 absDst = filename.absolute()
@@ -402,8 +506,14 @@ class Segment(object):
         return True
 
     def createTemplate(self, filename):
-        '''Create a template from a file.'''
-        absFn =  filename.absolute()
+        '''
+        Create a template in this segment from a file.
+
+        :param Path filename: filename of template file, relative to portfolio project directory.
+        :returns: True if success.
+        :rtype: boolean
+        '''
+        absFn = filename.absolute()
         with cd(self.absDirname):
             with cd(self.properties.defaultTemplatePath):
                 absDst = filename.absolute()
@@ -415,7 +525,14 @@ class Segment(object):
         return True
 
     def createSchema(self, kind, schema):
-        filename = Path(self.properties.defaultSchemaPath) / Path(kind + ".json")
+        '''
+        Create a JSON schema file for a model kind.
+
+        :param string kind: model kind for schema.
+        :param JSONobject schema: the schema for model kind.
+        '''
+        filename = Path(self.properties.defaultSchemaPath) / \
+            Path(kind + ".json")
         with cd(self.absDirname):
             with filename.open(mode="w") as fp:
                 json.dump(schema, fp, indent=4)
@@ -427,6 +544,8 @@ class Segment(object):
 
     def validate(self):
         '''
-        Validate this object against a schema.
+        Validate this Segment object against a schema.
+
+        :raises: jsonschema.exceptions.ValidationError if invalid.
         '''
         validate(self.properties, segmentSchema)

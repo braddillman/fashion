@@ -49,7 +49,7 @@ class LoadXML(object):
         self.name = moduleName + "::" + self.filename
         self.tags = ["input"]
         self.inputKinds = []
-        self.outputKinds = [self.config.kind]
+        self.outputKinds = [ self.config.kind, 'fashion.core.input.file' ]
 
     def execute(self, mdb, verbose=False, tags=None):
         '''
@@ -59,3 +59,4 @@ class LoadXML(object):
         with codecs.open(str(self.filename), 'r', 'utf_8', ) as fd:
             obj = munchify(xmltodict.parse(fd.read()))
             mdb.insert(self.config.kind, obj)
+            mdb.inputFile(str(self.filename))

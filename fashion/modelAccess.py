@@ -1,11 +1,19 @@
 '''
-Created on 2018-12-28
+ModelAccess - supervised database useage
+===================================
 
-Copyright (c) 2018 Bradford Dillman
+Rather than allow xform code to use the model database directly, access is 
+managed and supervised through this intermediary. All read and write access is
+recorded for later analysis. 
 
-@author: Bradford Dillman
+Reads and writes are guarded against undeclared access, since this would 
+violate the conditions of the Runway scheduler and possibly cause the xform 
+code to execute in an incorrect order (say, attempting to read input models 
+before other xforms write them as output models).
 
-A wrapper around the database to track database operations.
+Write access to validted against a JSON schema if one is available in the 
+SchemaRepository. Read access is not checked against the schema, since it 
+should have been checked before it was written anyway.
 
 ModelAccess provides a more abstract interface to the database suited for
 models. All models are associated with a 'kind', a string name. When using
@@ -35,10 +43,14 @@ is undefined.
 
 Nested access would put a context under a parent context, and if the parent 
 context were reset, it would recursivly reset all child contexts. Someday.
+
+Created on 2018-12-28 Copyright (c) 2018 Bradford Dillman
 '''
 
 import copy
 import logging
+
+from pathlib import Path
 
 from jsonschema import ValidationError
 from munch import Munch
@@ -48,14 +60,17 @@ from fashion.databaseAccess import DatabaseAccess
 
 
 class ModelAccessContext(object):
-    '''Record activity in a single context of model access.'''
+    '''
+    Record read and write database activity in a single context of model access.
+    '''
 
     def __init__(self, dba, schemaRepo, contextObj):
         '''
         Constructor.
-        :param dba: the database to use.
-        :param schemaRepo: the SchemaRepository to use for validating objects.
-        :param contextObj: the context with name, inputKinds and outputKinds.
+
+        :param DatabaseAccess dba: the database to use.
+        :param SchemaRepository schemaRepo: the SchemaRepository to use for validating objects.
+        :param object contextObj: the context with name, inputKinds, outputKinds and templatePath.
         '''
         self.dba = dba
         self.repo = schemaRepo
@@ -76,19 +91,23 @@ class ModelAccessContext(object):
 
     def reset(self):
         '''
-        Delete all database records created under this context.
+        Delete all database records previously created under this context, and
+        initializes the new context.
         '''
-        oldCtxList = self.dba.table('fashion.model.context').search(
+        # Get all past context objects (there should be only 1 normally).
+        oldCtxList = self.dba.table('fashion.core.context').search(
             where('name') == self.properties.name)
         if len(oldCtxList) == 0:
             return
         if len(oldCtxList) > 1:
-            logging.error("multiple context error")
+            logging.error("Multiple context error: {0}".format(
+                self.properties.name))
         for oldCtx in oldCtxList:
-            # delete old context objects, if any
+            # Delete previously inserted objects, if any.
             for kind, ids in oldCtx["insert"].items():
                 self.dba.table(kind).remove(doc_ids=ids)
-            self.dba.table('fashion.model.context').remove(
+            # Delete the previous context contexts.
+            self.dba.table('fashion.core.context').remove(
                 where('name') == self.properties.name)
 
     def finalize(self):
@@ -96,19 +115,23 @@ class ModelAccessContext(object):
         Store the activity collected in this context.
         '''
         # normalize sets into lists
-        self.normalize(self.insertStore, self.properties.insert)
-        self.normalize(self.searchStore, self.properties.search)
-        self.normalize(self.updateStore, self.properties.update)
-        self.normalize(self.removeStore, self.properties.remove)
-        self.dba.table('fashion.model.context').insert(self.properties)
+        self.___normalize(self.insertStore, self.properties.insert)
+        self.___normalize(self.searchStore, self.properties.search)
+        self.___normalize(self.updateStore, self.properties.update)
+        self.___normalize(self.removeStore, self.properties.remove)
+        self.dba.table('fashion.core.context').insert(self.properties)
 
-    def normalize(self, inStore, outStore):
+    def ___normalize(self, inStore, outStore):
+        '''
+        Convert sets to lists so they can be saved to the database store.
+        '''
         for kind, idSet in inStore.items():
             outStore[kind] = list(idSet)
 
     def recordAccess(self, store, kind, id):
         '''
         Record an access.
+
         :param store: where to record the access.
         :param kind: the model kind accessed.
         :param id: doc_id of the model accessed.
@@ -166,7 +189,6 @@ class ModelAccessContext(object):
                 "attempt to getByKind unlisted inputKind {0}".format(kind))
             return None
 
-
     def search(self, kind, q):
         '''
         Query within a model kind.
@@ -209,7 +231,11 @@ class ModelAccess(object):
     '''Access models in the database.'''
 
     def __init__(self, database, schemaRepo, contextObj):
-        '''Initialize context but don't enable it.'''
+        '''
+        Initialize context but don't enable it.
+
+        :param DatabaseAccess database: the database to use.
+        '''
         self.dbToUse = database
         self.context = ModelAccessContext(database, schemaRepo, contextObj)
         self.dba = None
@@ -254,8 +280,9 @@ class ModelAccess(object):
     def search(self, kind, q):
         '''
         Query within a model kind.
-        :param kind: the model kind.
-        :param q: the Query.
+
+        :param string kind: the model kind.
+        :param Query q: the Query.
         :return: list of all models which match the Query.
         '''
         return self.context.search(kind, q)
@@ -263,6 +290,7 @@ class ModelAccess(object):
     def getByKind(self, kind):
         '''
         Get a list of all models of the specified kind.
+
         :param kind: the model kind.
         :return: list of all models of the specified kind.
         '''
@@ -276,6 +304,19 @@ class ModelAccess(object):
         :return: the specified model or None.
         '''
         return self.context.getById(kind, id)
+
+    def getByQuery(self, kind, q):
+        '''
+        Get a single model of the specified kind and id number.
+
+        :param string kind: the model kind.
+        :param Query q: the Query.
+        :return: the model specified by the Query q or None.
+        '''
+        objs = self.context.search(kind, q)
+        if len(objs) == 0:
+            return None
+        return objs[0]
 
     def getSingleton(self, kind):
         '''
@@ -298,7 +339,7 @@ class ModelAccess(object):
                 "{0} not in outputKinds of {1}, no trace recorded".format(
                     traceKind, self.context.properties.name))
             return None
-    
+
         traceModel = {
             "kind": kind,
             "id": id,
@@ -306,6 +347,38 @@ class ModelAccess(object):
             "inputs": traceInputs
         }
         return self.insert(traceKind, traceModel)
+
+    def inputFile(self, filename):
+        '''
+        Mark a file as an input.
+        '''
+        if isinstance(filename, Path):
+            fn = filename.absolute().as_posix()
+        elif isinstance(filename, str):
+            fn = Path(filename).absolute().as_posix()
+        else:
+            fn = str(filename)
+        model = {
+            'contextName': self.context.properties.name,
+            'filename': fn
+        }
+        return self.insert('fashion.core.input.file', model)
+
+    def outputFile(self, filename):
+        '''
+        Mark a file as an output.
+        '''
+        if isinstance(filename, Path):
+            fn = filename.absolute().as_posix()
+        elif isinstance(filename, str):
+            fn = Path(filename).absolute().as_posix()
+        else:
+            fn = str(filename)
+        model = {
+            'contextName': self.context.properties.name,
+            'filename': fn
+        }
+        return self.insert('fashion.core.output.file', model)
 
     def generate(self, model, template, targetFile, templateDict={}, projRoot=None, traceInputs=None):
         '''

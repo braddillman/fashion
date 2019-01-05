@@ -8,6 +8,7 @@ Copyright (c) 2018 Bradford Dillman
 A collection of xform modules and xform objects.
 '''
 
+import copy
 import logging
 import traceback
 
@@ -34,18 +35,19 @@ class Runway(object):
         self.dba = dba
         self.warehouse = wh
 
-    def loadModules(self, verbose=False, tags=None):
+    def loadModules(self, tags=None):
         '''Load all xform module code.'''
         self.moduleDefs = self.warehouse.getModuleDefinitions(tags)
+        verbose = self.dba.isVerbose()
+        self.dba.table('fashion.core.module.definition').purge()
         for modName, modDef in self.moduleDefs.items():
-            # TODO: insert record for defined module
             with cd(modDef.absDirname):
                 if verbose:
                     print("Loading {0}".format(modDef.moduleName))
                 mod = XformModule(modDef)
                 if mod.loadModuleCode():
                     self.modules[modName] = mod
-                    # TODO: insert record for loaded module
+                    self.dba.table('fashion.core.module.definition').insert(modDef)
                 else:
                     # TODO: file not found, etc.
                     pass
@@ -58,9 +60,12 @@ class Runway(object):
             with cd(schDef.absDirname):
                 self.schemaRepo.addFromDescription(schDef)
 
-    def initModules(self, verbose=False, tags=None):
+    def initModules(self, tags=None):
         '''Initialize modules from their configs.'''
         self.moduleCfgs = self.warehouse.getModuleConfigs(self.modules)
+        verbose = self.dba.isVerbose()
+        self.dba.table('fashion.core.module.config').purge()
+        self.dba.table('fashion.core.module.object').purge()
         for cfg in self.moduleCfgs:
             with cd(cfg.absDirname):
                 with ModelAccess(self.dba, self.schemaRepo, cfg) as mdb:
@@ -69,6 +74,7 @@ class Runway(object):
                         print("Initializing module {0}".format(
                             mod.properties.moduleName))
                     xfObjs = mod.init(cfg, mdb, tags)
+                    self.dba.table('fashion.core.module.config').insert(cfg)
                     for xfo in xfObjs:
                         if verbose:
                             print("Created xform object {0}".format(xfo.name))
@@ -80,7 +86,14 @@ class Runway(object):
                             if not hasattr(xfo, "templatePath"):
                                 xfo.templatePath = cfg.templatePath
                             self.objects[xfo.name] = xfo
-                            # TODO: insert record for init'ed object
+                            # obj = Munch({
+                            #     "name": xfo.name,
+                            #     "tags": xfo.tags,
+                            #     "inputKinds": xfo.inputKinds,
+                            #     "outputKinds": xfo.outputKinds,
+                            # })
+                            obj = vars(xfo)
+                            self.dba.table('fashion.core.module.object').insert(obj)
 
     def initMirror(self, projDir, mirrorDir, force=False):
         '''Set a database singleton record with mirror info.'''
@@ -93,7 +106,7 @@ class Runway(object):
                               "mirrorPath": str(mirrorDir),
                               "force": force})
 
-    def plan(self, verbose=False):
+    def plan(self):
         '''Construction the xform execution plan.'''
         self.xfOutputs = {xf.name: set(xf.outputKinds)
                           for xf in self.objects.values()}
@@ -154,13 +167,14 @@ class Runway(object):
         for idx, xfName in enumerate(self.execList):
             logging.debug("{0}:{1}".format(idx, xfName))
 
-    def execute(self, verbose=False, tags=None):
+    def execute(self, tags=None):
         '''Execute all the xforms planned in self.execList.'''
+        verbose = self.dba.isVerbose()
         for xfName in self.execList:
             xfo = self.objects[xfName]
             try:
                 with ModelAccess(self.dba, self.schemaRepo, xfo) as mdb:
-                    if verbose:
+                    if self.dba.isVerbose():
                         print("Executing {0}".format(xfo.name))
                     xfo.execute(mdb, verbose, tags)
             except:

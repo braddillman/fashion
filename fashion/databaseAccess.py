@@ -27,22 +27,48 @@ class DatabaseAccess(object):
     def table(self, tableName):
         return self.db.table(tableName)
 
-    def insert(self, *args, **kwargs):
-        '''Insert an object into the database.'''
-        return self.db.insert(*args, **kwargs)
+    # def insert(self, *args, **kwargs):
+    #     '''Insert an object into the database.'''
+    #     return self.db.insert(*args, **kwargs)
+    
+    # def get(self, *args, **kwargs):
+    #     '''Get an object from the database.'''
+    #     return self.db.Get(*args, **kwargs)
 
-    def get(self, *args, **kwargs):
-        '''Get an object from the database.'''
-        return self.db.Get(*args, **kwargs)
+    # def contains(self, *args, **kwargs):
+    #     '''Test an object from the database.'''
+    #     return self.db.Get(*args, **kwargs)
 
-    def contains(self, *args, **kwargs):
-        '''Test an object from the database.'''
-        return self.db.Get(*args, **kwargs)
+    # def search(self, *args, **kwargs):
+    #     '''Query for objects.'''
+    #     return self.db.search(*args, **kwargs)
 
-    def search(self, *args, **kwargs):
-        '''Query for objects.'''
-        return self.db.search(*args, **kwargs)
+    # def remove(self, *args, **kwargs):
+    #     '''Remove objects by query.'''
+    #     return self.db.remove(*args, **kwargs)
 
-    def remove(self, *args, **kwargs):
-        '''Remove objects by query.'''
-        return self.db.remove(*args, **kwargs)
+    def setSingleton(self, kind, model):
+        id = None
+        self.db.table(kind).purge()
+        id = self.db.table(kind).insert(model)
+        return id
+
+    def getSingleton(self, kind):
+        objs = self.db.table(kind).all()
+        if len(objs) == 0:
+            return None
+        return objs[0]
+
+    def getArgs(self):
+        return self.getSingleton('fashion.core.args')
+
+    def isVerbose(self):
+        return self.getArgs()["verbose"]
+
+    def isDebug(self):
+        return self.getArgs()["debug"]
+
+    def kinds(self):
+        k = self.db.tables()
+        k.remove("_default")
+        return k

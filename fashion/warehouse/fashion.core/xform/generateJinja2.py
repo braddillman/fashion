@@ -34,7 +34,7 @@ class Generate(object):
         self.tags = config.tags
         self.inputKinds = ["fashion.core.generate.jinja2.spec",
                            "fashion.core.mirror"]
-        self.outputKinds = []
+        self.outputKinds = [ 'fashion.core.output.file' ]
 
     def execute(self, mdb, verbose=False, tags=None):
         '''cwd is project root directory.'''
@@ -56,5 +56,6 @@ class Generate(object):
                     with targetPath.open(mode="w") as tf:
                         tf.write(result)
                     mirror.copyToMirror(targetPath)
+                    mdb.outputFile(targetPath)
                 except TemplateNotFound:
                     logging.error("TemplateNotFound: {0}".format(gs.template))

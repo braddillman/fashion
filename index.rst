@@ -11,11 +11,33 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-.. automodule:: project
-.. autofunction:: findProject
-.. autoclass:: Project
+.. automodule:: fashion.portfolio
+.. autofunction:: findPortfolio
+.. autoclass:: Portfolio
    :members:
 
+.. automodule:: fashion.warehouse
+.. autoclass:: Warehouse
+   :members:
+
+.. automodule:: fashion.segment
+.. autoclass:: Segment
+   :members:
+
+.. automodule:: fashion.modelAccess
+.. autoclass:: ModelAccess
+   :members:
+
+.. automodule:: fashion.modelAccess
+.. autoclass:: ModelAccess
+   :members:
+
+Util
+===================================
+
+.. automodule:: fashion.util
+.. autoclass:: cd
+   :members:
 
 Indices and tables
 ==================

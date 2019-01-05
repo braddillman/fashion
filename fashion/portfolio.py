@@ -1,13 +1,21 @@
 '''
-Created on 2018-12-14
+Portfolio - the project definition
+===================================
 
-Copyright (c) 2018 Bradford Dillman
+The portfolio is the root of a fashion-enhanced project, located at the 
+./fashion directory created during 'fashion init'.
 
-@author: Bradford Dillman
+It is normal and expected to directly edit files in the fashion directories,
+so getting to know the directory structure will aid navigation.
 
-Portfolio class describes a fashion user project.
+project directory - your project
+/fashion - added by 'fashion init'
+/fashion/warehouse - contains local segments
+
+Created on 2018-12-14 Copyright (c) 2018 Bradford Dillman
 '''
 
+import copy
 import shutil
 import logging
 import json
@@ -43,9 +51,6 @@ class Portfolio(object):
         '''
         self.projectPath = projDir.absolute()
         self.fashionPath = self.projectPath / 'fashion'
-        self.warehousePath = self.fashionPath / 'warehouse'
-        self.warehouse = Warehouse(
-            self.warehousePath, Warehouse(FASHION_WAREHOUSE_PATH))
         self.mirrorPath = self.fashionPath / 'mirror'
         self.portfolioPath = self.fashionPath / 'portfolio.json'
         self.fashionDbPath = self.fashionPath / 'database.json'
@@ -53,6 +58,23 @@ class Portfolio(object):
         if self.fashionDbPath.exists():
             self.load()
             self.db = DatabaseAccess(self.fashionDbPath)
+
+    def __setDefaultProperties(self):
+        self.properties = munchify({
+            "name": "fashion",
+            "defaultSegment": "local",
+            "warehouses": [
+                (self.fashionPath / 'warehouse').as_posix(),        
+                FASHION_WAREHOUSE_PATH.as_posix()
+            ]
+        })
+
+    def loadWarehouses(self):
+        self.warehouse = None
+        wl = copy.copy(self.properties.warehouses)
+        wl.reverse()
+        for wp in wl:
+            self.warehouse = Warehouse(Path(wp), self.warehouse)
 
     def exists(self):
         '''Check if this project exists.'''
@@ -62,14 +84,9 @@ class Portfolio(object):
         '''Create a new portfolio.'''
         if not self.exists():
             self.segments = {}
-            self.properties = munchify({
-                "name": "fashion",
-                "defaultSegment": "local"
-            })
-            # os.mkdir(str(self.fashionPath))
-            # os.mkdir(str(self.warehousePath))
+            self.__setDefaultProperties()
             self.fashionPath.mkdir(parents=True, exist_ok=True)
-            self.warehousePath.mkdir(parents=True, exist_ok=True)
+            (self.fashionPath / "warehouse").mkdir(parents=True, exist_ok=True)
             self.db = DatabaseAccess(self.fashionDbPath)
             self.warehouse.newSegment("local")
             self.save()
@@ -90,13 +107,30 @@ class Portfolio(object):
         with self.portfolioPath.open(mode='r') as fd:
             dict = json.loads(fd.read())
             self.properties = munchify(dict)
+        self.loadWarehouses()
 
-    def getRunway(self, verbose=False, tags=None):
-        '''Get a Runway for this Portfolio.'''
-        self.warehouse.loadSegments()
+    def defaultSegment(self):
+        return self.warehouse.loadSegment(self.defaultSegmentName())
+
+    def defaultSegmentName(self):
+        return self.properties.defaultSegment
+
+    def setDefaultSegment(self, segname):
+        self.properties.defaultSegment = segname
+
+    def getRunway(self, tags=None):
+        '''
+        Get a Runway for this Portfolio.
+
+        :param boolean verbose: True if the runway should be verbose.
+        :param list tags: a list of tags for the Runway to include.
+        :returns: a Runway object.
+        :rtype: fashion.Runway
+        '''
+        self.warehouse.loadSegments(self.db)
         r = Runway(self.db, self.warehouse)
-        r.loadModules(verbose=verbose)
-        r.initModules(verbose=verbose)
+        r.loadModules()
+        r.initModules()
         return r
 
     def normalizeFilename(self, filename):
