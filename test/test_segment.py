@@ -24,7 +24,7 @@ class TestSegment(object):
             assert s1.absFilename == s2.absFilename
 
     def test_create(self, tmp_path):
-        '''Test creatinga new segment.'''
+        '''Test creating a new segment.'''
         with cd(tmp_path):
             s1 = Segment.create(tmp_path, "testseg")
             assert s1.absFilename is not None
@@ -41,3 +41,11 @@ class TestSegment(object):
             assert s1.properties.segmentRefs == s2.properties.segmentRefs
             assert s1.properties.extraFiles == s2.properties.extraFiles
             assert str(s1.absFilename) == str(s2.absFilename)
+
+    def test_findModuleDefinitions(self, tmp_path):
+        '''Test finding segment xform files.'''
+        fashionHome = Path(__file__).resolve().parent.parent / "fashion"
+        segPath = fashionHome / "warehouse" / "fashion.core"
+        with cd(segPath):
+            seg = Segment.load(Path("segment.json"))
+            xformModules = seg.findModuleDefinitions()

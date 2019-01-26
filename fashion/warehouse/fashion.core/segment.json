@@ -6,27 +6,10 @@
     "schema": [
         {"kind":"fashion.core.generate.jinja2.spec", "filename":"./schema/generateJinja2.json"}
     ],
-    "xformModules": [
-        {
-            "moduleName": "generate.jinja2",
-            "filename": "./xform/generateJinja2.py", 
-            "tags": [ "output" ]
-        },
-        {
-            "moduleName": "load.JSON",
-            "filename": "./xform/loadJSON.py", 
-            "tags": [ "input" ]
-        },
-        {
-            "moduleName": "load.XML",
-            "filename": "./xform/loadXML.py", 
-            "tags": [ "input" ]
-        }
-    ],
     "xformConfig": [
         {
-            "moduleName": "fashion.core.generate.jinja2",
-            "tags": [ "output" ],
+            "moduleName": "fashion.core.services",
+            "tags": [ ],
             "parameters": {}
         }
     ],

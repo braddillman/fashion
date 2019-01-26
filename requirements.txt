@@ -1,3 +1,4 @@
+packaging==18.0
 tinydb==3.12.2
 munch==2.3.2
 Jinja2==2.10

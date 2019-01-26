@@ -55,6 +55,7 @@ Created on 2018-12-16 Copyright (c) 2018 Bradford Dillman
 
 import json
 import logging
+import os
 import shutil
 
 from pathlib import Path
@@ -156,57 +157,6 @@ segmentSchema = {
                                     "./schema/generateJinja2.json"
                                 ],
                                 "pattern": "^(.*)$"
-                            }
-                        }
-                    }
-                },
-                "xformModules": {
-                    "$id": "#/properties/xformModules",
-                    "type": "array",
-                    "title": "The Xformmodules Schema",
-                    "items": {
-                        "$id": "#/properties/xformModules/items",
-                        "type": "object",
-                        "title": "The Items Schema",
-                        "required": [
-                            "moduleName",
-                            "filename"
-                        ],
-                        "properties": {
-                            "moduleName": {
-                                "$id": "#/properties/xformModules/items/properties/moduleName",
-                                "type": "string",
-                                "title": "The Modulename Schema",
-                                "default": "",
-                                "examples": [
-                                    "fashion.core.generate.jinja2"
-                                ],
-                                "pattern": "^(.*)$"
-                            },
-                            "filename": {
-                                "$id": "#/properties/xformModules/items/properties/filename",
-                                "type": "string",
-                                "title": "The Filename Schema",
-                                "default": "",
-                                "examples": [
-                                    "./xform/generateJinja2.py"
-                                ],
-                                "pattern": "^(.*)$"
-                            },
-                            "tags": {
-                                "$id": "#/properties/xformModules/items/properties/tags",
-                                "type": "array",
-                                "title": "The Tags Schema",
-                                "items": {
-                                    "$id": "#/properties/xformModules/items/properties/tags/items",
-                                    "type": "string",
-                                    "title": "The Items Schema",
-                                    "default": "",
-                                    "examples": [
-                                        "output"
-                                    ],
-                                    "pattern": "^(.*)$"
-                                }
                             }
                         }
                     }
@@ -338,7 +288,6 @@ class Segment(object):
             "libPath": "./lib",
             "schema": [],
             "segmentRefs": ["fashion.core"],
-            "xformModules": [],
             "xformConfig": [],
             "extraFiles": []
         })
@@ -378,6 +327,26 @@ class Segment(object):
         newSeg.createDirectories()
         newSeg.save()
         return newSeg
+
+    def findModuleDefinitions(self):
+        xformModules = []
+        with cd(self.absDirname / "xform"):
+            for root, _, files in os.walk("."):
+                if os.path.basename(root) != '__pycache__':
+                    for file in files:
+                        p = Path(root) / Path(file)
+                        filename = Path("xform") / p
+                        mod = [self.properties.name]
+                        mod.extend(p.parts[0:-1])
+                        mod.append(p.stem)
+                        modName = ".".join(mod)
+                        modDef = {
+                            "moduleName": modName,
+                            "filename": str(filename.as_posix()),
+                            "templatePath": self.properties.templatePath
+                        }
+                        xformModules.append(modDef)
+        return xformModules
 
     def getAbsPath(self, filename):
         '''

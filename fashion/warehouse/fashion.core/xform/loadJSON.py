@@ -16,7 +16,7 @@ from munch import munchify
 # Module level code is executed when this file is loaded.
 # cwd is where segment file was loaded.
 
-def init(moduleConfig, mdb, verbose=False, tags=None):
+def init(moduleConfig, codeRegistry, verbose=False, tags=None):
     '''
     Create 1 LoadJSON object for each file.
     cwd is where segment file was loaded.
@@ -27,7 +27,8 @@ def init(moduleConfig, mdb, verbose=False, tags=None):
         filenames = glob.glob(moduleConfig.parameters.filename)
     cfg = munchify(moduleConfig.parameters)
     del cfg.filename
-    return [LoadJSON(moduleConfig.moduleName, cfg, fn) for fn in filenames]
+    for fn in filenames:
+        codeRegistry.addXformObject(LoadJSON(moduleConfig.moduleName, cfg, fn))
 
 class LoadJSON(object):
     '''
@@ -39,6 +40,8 @@ class LoadJSON(object):
         Constructor.
         cwd is where segment file was loaded.
         '''
+        self.version = "1.0.0"
+        self.templatePath = []
         self.config = cfg
         self.filename = os.path.abspath(filename)
         self.name = moduleName + "::" + self.filename
@@ -46,11 +49,12 @@ class LoadJSON(object):
         self.inputKinds = []
         self.outputKinds = [ self.config.kind, 'fashion.core.input.file' ]
 
-    def execute(self, mdb, verbose=False, tags=None):
+    def execute(self, codeRegistry, verbose=False, tags=None):
         '''
         Load the JSON file and insert it into the model database.
         cwd is project root.
         '''
+        mdb = codeRegistry.getService('fashion.prime.modelAccess')
         with open(str(self.filename), 'r') as fd:
             mdb.inputFile(str(self.filename))
             obj = munchify(json.loads(fd.read()))

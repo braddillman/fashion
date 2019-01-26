@@ -20,9 +20,12 @@ from fashion.mirror import Mirror
 # cwd is where segment file was loaded.
 
 
-def init(config, mdb, verbose=False, tags=None):
+def init(config, codeRegistry, verbose=False, tags=None):
     '''cwd is where segment file was loaded.'''
-    return [Generate(config)]
+    codeRegistry.addXformObject(Generate(config))
+
+
+
 
 
 class Generate(object):
@@ -30,15 +33,18 @@ class Generate(object):
 
     def __init__(self, config):
         '''Constructor.'''
+        self.version = "1.0.0"
+        self.templatePath = []
         self.name = config.moduleName
         self.tags = config.tags
         self.inputKinds = ["fashion.core.generate.jinja2.spec",
                            "fashion.core.mirror"]
         self.outputKinds = [ 'fashion.core.output.file' ]
 
-    def execute(self, mdb, verbose=False, tags=None):
+    def execute(self, codeRegistry, verbose=False, tags=None):
         '''cwd is project root directory.'''
         # set up  mirrored directories
+        mdb = codeRegistry.getService('fashion.prime.modelAccess')
         mirCfg = munchify(mdb.getSingleton("fashion.core.mirror"))
         mirror = Mirror(Path(mirCfg.projectPath), Path(mirCfg.mirrorPath), force=mirCfg.force)
         genSpecs = mdb.getByKind(self.inputKinds[0])

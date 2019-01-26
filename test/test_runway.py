@@ -7,14 +7,14 @@ from fashion.warehouse import Warehouse
 
 class DummyXform(object):
 
-    def __init__(self, tags=None):
+    def __init__(self, mdb, codeRegistry, tags=None):
         self.name = "dummy"
         self.tags = [] if tags is None else tags
         self.inputKinds = []
         self.outputKinds = []
         self.executed = False
 
-    def execute(self, mdb, tags=None):
+    def execute(self, mdb, codeRegistry, tags=None):
         self.executed = True
 
 class TestRunway(object):
@@ -23,7 +23,7 @@ class TestRunway(object):
         dba = DatabaseAccess(tmp_path / "db.json")
         fw = Warehouse(FASHION_WAREHOUSE_PATH)
         wh = Warehouse(tmp_path, fw)
-        wh.loadSegments()
+        wh.loadSegments(dba)
         r = Runway(dba, wh)
         assert r is not None
     
@@ -31,7 +31,7 @@ class TestRunway(object):
         dba = DatabaseAccess(tmp_path / "db.json")
         fw = Warehouse(FASHION_WAREHOUSE_PATH)
         wh = Warehouse(tmp_path, fw)
-        wh.loadSegments()
+        wh.loadSegments(dba)
         r = Runway(dba, wh)
         r.loadSchemas()
 
@@ -39,14 +39,23 @@ class TestRunway(object):
         dba = DatabaseAccess(tmp_path / "db.json")
         fw = Warehouse(FASHION_WAREHOUSE_PATH)
         wh = Warehouse(tmp_path, fw)
-        wh.loadSegments()
+        wh.loadSegments(dba)
         r = Runway(dba, wh)
+        dba.setSingleton('fashion.prime.args',
+            {
+                "force":False,
+                "verbose":True
+            })
+        mirrorDir = tmp_path / "mirror"
+        mirrorDir.mkdir()
+        dba.setSingleton('fashion.prime.portfolio',
+            {
+                "projectPath":".",
+                "mirrorPath":mirrorDir.as_posix()
+            })
         r.loadModules()
         r.initModules()
         r.plan()
-        mirrorDir = tmp_path / "mirror"
-        mirrorDir.mkdir()
-        r.initMirror(tmp_path, mirrorDir)
         r.execute()
 
     # def test_noPlan(self, tmp_path):

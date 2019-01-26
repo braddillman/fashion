@@ -93,17 +93,19 @@ class Warehouse(object):
         segfn = self.dir / segname / "segment.json"
         seg = None
         if segfn.exists():
+            if db.isVerbose():
+                print("Loading segment {0}".format(segname))
             seg = Segment.load(segfn)
         elif self.fallback is not None:
             # Try the fallback Warehouse if not found.
-            seg = self.fallback.loadSegment(segname)
+            seg = self.fallback.loadSegment(segname, db)
 
         # Update the cache.
         cache[segname] = seg
         Q = Query()
 
         # Make a note in the database.
-        db.table('fashion.core.segment').upsert(seg.properties, Q.name == segname)
+        db.table('fashion.prime.segment').upsert(seg.properties, Q.name == segname)
 
         return seg
 
@@ -114,8 +116,8 @@ class Warehouse(object):
         :returns: list of all Segment objects.
         :rtype: list(Segment)
         '''
-        db.table('fashion.core.segment').purge()
-        self.loadSegs(db, self.segmentCache)
+        db.table('fashion.prime.segment').purge()
+        return self.loadSegs(db, self.segmentCache)
 
     def loadSegs(self, db, cache):
         # Load all the segments in this Warehouse.
@@ -126,7 +128,7 @@ class Warehouse(object):
             self.segments.extend(self.fallback.loadSegs(db, cache))
         return self.segments
 
-    def newSegment(self, segname):
+    def newSegment(self, segname, db):
         '''
         Create a new segment in this warehouse.
 
@@ -140,20 +142,20 @@ class Warehouse(object):
         segdir = self.dir / segname
         segdir.mkdir(parents=True, exist_ok=True)
         Segment.create(segdir, segname)
-        self.loadSegment(segname)
+        self.loadSegment(segname, db)
 
-    def exportSegment(self, segname):
+    def exportSegment(self, segname, db):
         '''
         Export a segment to a zip file.
 
         :param string segname: name of segment to export.
         '''
-        seg = self.loadSegment(segname)
+        seg = self.loadSegment(segname, db)
         exportName = segname + "_v" + seg.properties.version + ".zip"
         dirName = seg.absDirname.parent.resolve()
         with zipfile.ZipFile(exportName, mode='w') as zip:
             with cd(dirName):
-                for root, dirs, files in os.walk(segname):
+                for root, _, files in os.walk(segname):
                     if os.path.basename(root) != '__pycache__':
                         for file in files:
                             zip.write(os.path.join(root, file))
@@ -176,7 +178,7 @@ class Warehouse(object):
         '''
         shutil.rmtree(str(segment.absDirname))
 
-    def getModuleDefinitions(self, tags=None):
+    def getModuleDefinitions(self, dba, tags=None):
         '''
         Load all "xformModules" xform module defintions from all segments 
         which match tags. Does NOT load the modules.
@@ -186,29 +188,28 @@ class Warehouse(object):
         :rtype: dictionary {moduleName:module}
         '''
         modDefs = {}
+        dba.table('fashion.prime.module.definition').purge()
         for seg in self.segments:
-            for m in seg.properties.xformModules:
+            xformModules = munchify(seg.findModuleDefinitions())
+            for m in xformModules:
                 if m.moduleName in modDefs:
                     logging.error(
-                        "xform module name collision: {0}".format(m.name))
+                        "xform module name collision: {0}".format(m.moduleName))
                 else:
-                    if matchTags(tags, m.tags):
-                        mod = munchify(m)
-                        if "templatePath" not in mod:
-                            if "templatePath" in seg.properties:
-                                mod.templatePath = seg.properties.templatePath
-                            else:
-                                mod.templatePath = []
-                        with cd(seg.absDirname):
-                            mod.templatePath = [
-                                Path(p).absolute().as_posix() for p in mod.templatePath]
-                        mod.absDirname = seg.absDirname.as_posix()
-                        mod.moduleRootName = m.moduleName
-                        mod.moduleName = seg.properties.name + '.' + m.moduleName
-                        modDefs[mod.moduleName] = mod
+                    mod = munchify(m)
+                    if "templatePath" not in mod:
+                        if "templatePath" in seg.properties:
+                            mod.templatePath = seg.properties.templatePath
+                        else:
+                            mod.templatePath = []
+                    mod.absDirname = seg.absDirname.as_posix()
+                    mod.moduleRootName = m.moduleName
+                    mod.segmentName = seg.properties.name
+                    dba.table('fashion.prime.module.definition').insert(mod)
+                    modDefs[mod.moduleName] = mod
         return modDefs
 
-    def getModuleConfigs(self, moduleDict):
+    def getModuleConfigs(self, dba, moduleDict):
         '''
         Load all "xformConfig" xform module configurations from all segments 
         for modules in moduleDict. Does NOT load the modules or initialize them.
@@ -218,12 +219,13 @@ class Warehouse(object):
         :rtype: list(xform module configs)
         '''
         cfgs = []
+        dba.table('fashion.prime.module.config').purge()
         for seg in self.segments:
             for c in seg.properties.xformConfig:
                 if c.moduleName in moduleDict:
-                    modDef = moduleDict[c.moduleName]
                     cfg = munchify(c)
                     cfg.name = cfg.moduleName
+                    cfg.segmentName = seg.properties.name
                     cfg.absDirname = seg.absDirname.as_posix()
                     # set defaults for omitted properties
                     if "inputKinds" not in cfg:
@@ -233,8 +235,14 @@ class Warehouse(object):
                     if "tags" not in cfg:
                         cfg.tags = []
                     if "templatePath" not in cfg:
-                        cfg.templatePath = modDef.properties.templatePath
+                        if "templatePath" in seg.properties:
+                            cfg.templatePath = seg.properties.templatePath
+                        else:
+                            cfg.templatePath = []
                     cfgs.append(cfg)
+                    dba.table('fashion.prime.module.config').insert(cfg)
+                else:
+                    logging.error("No module for config: {0}".format(c.moduleName))
         return cfgs
 
     def getUndefinedModuleConfigs(self, moduleDict):
@@ -291,23 +299,6 @@ class Warehouse(object):
         for o in objs:
             builder.add_object(o)
         schema = builder.to_schema()
-        localSeg = self.loadSegment("local")
+        localSeg = self.loadSegment("local", dba)
         localSeg.createSchema(kind, schema)
         return True
-
-    def getDefaultsTemplatePath(self):
-        '''
-        Get the templatePath to search for default implementations, such as
-        default xform moduel source code.
-
-        :returns: a list of template search paths.
-        :rtype: list(string filenames)
-        '''
-        localSeg = self.loadSegment("local")
-        localPath = [str(localSeg.getAbsPath(Path(p)))
-                     for p in localSeg.properties.templatePath]
-        coreSeg = self.loadSegment("fashion.core")
-        corePath = [str(coreSeg.getAbsPath(Path(p)))
-                    for p in coreSeg.properties.templatePath]
-        localPath.extend(corePath)
-        return localPath

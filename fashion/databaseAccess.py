@@ -60,13 +60,19 @@ class DatabaseAccess(object):
         return objs[0]
 
     def getArgs(self):
-        return self.getSingleton('fashion.core.args')
+        return self.getSingleton('fashion.prime.args')
 
     def isVerbose(self):
-        return self.getArgs()["verbose"]
+        args = self.getArgs()
+        if args is None:
+            return False
+        return args["verbose"]
 
     def isDebug(self):
-        return self.getArgs()["debug"]
+        args = self.getArgs()
+        if args is None:
+            return False
+        return args["debug"]
 
     def kinds(self):
         k = self.db.tables()

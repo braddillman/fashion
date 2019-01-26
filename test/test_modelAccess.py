@@ -33,7 +33,7 @@ class TestModelAccess(object):
         with ModelAccess(dba, schemaRepo, d) as mdb:
             id = mdb.insert("dummy.output", {"name": "dummy model"})
             assert id is not None
-        ctxs = dba.table('fashion.model.context').all()
+        ctxs = dba.table('fashion.prime.context').all()
         assert len(ctxs) == 1
         assert len(ctxs[0]["insert"]) == 1
         assert 'dummy.output' in ctxs[0]["insert"]
@@ -53,19 +53,19 @@ class TestModelAccess(object):
         with ModelAccess(dba, schemaRepo, d) as mdb:
             id = mdb.insert("dummy.output", {"name": "dummy model"})
             assert id is not None
-        ctxs = dba.table('fashion.model.context').all()
+        ctxs = dba.table('fashion.prime.context').all()
         assert len(ctxs) == 1
         models = dba.table('dummy.output').all()
         assert len(models) == 1
         # Now re-enter the same context
         with ModelAccess(dba, schemaRepo, d) as mdb:
-            ctxs = dba.table('fashion.model.context').all()
+            ctxs = dba.table('fashion.prime.context').all()
             assert len(ctxs) == 0
             models = dba.table('dummy.output').all()
             assert len(models) == 0
             id = mdb.insert("dummy.output", {"name": "dummy model the second"})
             assert id is not None
-        ctxs = dba.table('fashion.model.context').all()
+        ctxs = dba.table('fashion.prime.context').all()
         assert len(ctxs) == 1
         models = dba.table('dummy.output').all()
         assert len(models) == 1

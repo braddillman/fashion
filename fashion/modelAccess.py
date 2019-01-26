@@ -76,7 +76,6 @@ class ModelAccessContext(object):
         self.repo = schemaRepo
         self.contextObj = contextObj
         self.properties = Munch()
-        self.properties.templatePath = contextObj.templatePath
         self.properties.name = contextObj.name
         self.properties.inputKinds = contextObj.inputKinds
         self.properties.outputKinds = contextObj.outputKinds
@@ -95,7 +94,7 @@ class ModelAccessContext(object):
         initializes the new context.
         '''
         # Get all past context objects (there should be only 1 normally).
-        oldCtxList = self.dba.table('fashion.core.context').search(
+        oldCtxList = self.dba.table('fashion.prime.context').search(
             where('name') == self.properties.name)
         if len(oldCtxList) == 0:
             return
@@ -107,7 +106,7 @@ class ModelAccessContext(object):
             for kind, ids in oldCtx["insert"].items():
                 self.dba.table(kind).remove(doc_ids=ids)
             # Delete the previous context contexts.
-            self.dba.table('fashion.core.context').remove(
+            self.dba.table('fashion.prime.context').remove(
                 where('name') == self.properties.name)
 
     def finalize(self):
@@ -119,7 +118,7 @@ class ModelAccessContext(object):
         self.___normalize(self.searchStore, self.properties.search)
         self.___normalize(self.updateStore, self.properties.update)
         self.___normalize(self.removeStore, self.properties.remove)
-        self.dba.table('fashion.core.context').insert(self.properties)
+        self.dba.table('fashion.prime.context').insert(self.properties)
 
     def ___normalize(self, inStore, outStore):
         '''
@@ -127,6 +126,14 @@ class ModelAccessContext(object):
         '''
         for kind, idSet in inStore.items():
             outStore[kind] = list(idSet)
+
+    def isAllowedInput(self, kind):
+        if kind.startswith("fashion.prime"):
+            return True
+        return kind in self.properties.inputKinds
+
+    def isAllowedOutput(self, kind):
+        return kind in self.properties.outputKinds
 
     def recordAccess(self, store, kind, id):
         '''
@@ -152,7 +159,7 @@ class ModelAccessContext(object):
             logging.error("Validation error: kind={0}".format(kind))
             return None
         id = None
-        if kind in self.properties.outputKinds:
+        if self.isAllowedOutput(kind):
             id = self.dba.table(kind).insert(model)
             self.recordAccess(self.insertStore, kind, id)
         else:
@@ -167,7 +174,7 @@ class ModelAccessContext(object):
             logging.error("Validation error: kind={0}".format(kind))
             return None
         id = None
-        if kind in self.properties.outputKinds:
+        if self.isAllowedOutput(kind):
             self.dba.table(kind).purge()
             id = self.dba.table(kind).insert(model)
             self.recordAccess(self.insertStore, kind, id)
@@ -177,7 +184,7 @@ class ModelAccessContext(object):
         return id
 
     def getSingleton(self, kind):
-        if kind in self.properties.inputKinds:
+        if self.isAllowedInput(kind):
             objs = self.dba.table(kind).all()
             if len(objs) == 0:
                 return None
@@ -195,7 +202,7 @@ class ModelAccessContext(object):
         :param kind: the model kind to be searched.
         :param q: the query to perform.
         '''
-        if kind in self.properties.inputKinds:
+        if self.isAllowedInput(kind):
             objs = self.dba.table(kind).search(q)
             for o in objs:
                 self.recordAccess(self.searchStore, kind, o.doc_id)
@@ -206,7 +213,7 @@ class ModelAccessContext(object):
             return []
 
     def getByKind(self, kind):
-        if kind in self.properties.inputKinds:
+        if self.isAllowedInput(kind):
             objs = self.dba.table(kind).all()
             for o in objs:
                 self.recordAccess(self.searchStore, kind, o.doc_id)
@@ -217,7 +224,7 @@ class ModelAccessContext(object):
             return []
 
     def getById(self, kind, id):
-        if kind in self.properties.inputKinds:
+        if self.isAllowedInput(kind):
             o = self.dba.table(kind).get(doc_id=id)
             self.recordAccess(self.searchStore, kind, o.doc_id)
             return o
@@ -239,6 +246,8 @@ class ModelAccess(object):
         self.dbToUse = database
         self.context = ModelAccessContext(database, schemaRepo, contextObj)
         self.dba = None
+        self.name = "fashion.prime.modelAccess"
+        self.version = "1.0.0"
 
     def __enter__(self):
         '''Set up context.'''
@@ -333,7 +342,7 @@ class ModelAccess(object):
         :param id: the model ID.
         :param traceInputs: list of input model tuples (kind, id).
         '''
-        traceKind = 'fashion.core.trace'
+        traceKind = 'fashion.prime.trace'
         if traceKind not in self.context.properties.outputKinds:
             logging.error(
                 "{0} not in outputKinds of {1}, no trace recorded".format(
@@ -379,23 +388,3 @@ class ModelAccess(object):
             'filename': fn
         }
         return self.insert('fashion.core.output.file', model)
-
-    def generate(self, model, template, targetFile, templateDict={}, projRoot=None, traceInputs=None):
-        '''
-        Write a generation model for a single file.
-        model is the model object to use.
-        templateDict
-        targetFile is relative to project directory.
-        projRoot overrides the project directory.
-        :param traceInputs: list of input model tuples (kind, id).
-        '''
-        genModel = {'model': model,
-                    'template': template,
-                    'targetFile': targetFile,
-                    'templatePath': self.context.properties.templatePath,
-                    'templateDict': templateDict,
-                    'producer': self.context.properties.name}
-        if projRoot is not None:
-            genModel["projRoot"] = projRoot
-        kind = 'fashion.core.generate.jinja2.spec'
-        return self.insert(kind, genModel, traceInputs=traceInputs)

@@ -12,8 +12,10 @@ import copy
 import logging
 import traceback
 
-from munch import Munch
+from munch import Munch, munchify
+from tinydb import Query
 
+from fashion.codeRegistry import CodeRegistry
 from fashion.modelAccess import ModelAccess
 from fashion.schema import SchemaRepository
 from fashion.util import cd
@@ -29,21 +31,21 @@ class Runway(object):
         self.moduleDefs = {}
         self.moduleCfgs = []
         self.modules = {}
-        self.objects = {}
         self.schemaDefs = {}
-        self.schemaRepo = SchemaRepository()
         self.dba = dba
         self.warehouse = wh
+        self.schemaRepo = SchemaRepository()
+        self.codeRegistry = CodeRegistry(self.dba)
 
     def loadModules(self, tags=None):
         '''Load all xform module code.'''
-        self.moduleDefs = self.warehouse.getModuleDefinitions(tags)
+        self.moduleDefs = self.warehouse.getModuleDefinitions(self.dba, tags)
         verbose = self.dba.isVerbose()
         self.dba.table('fashion.core.module.definition').purge()
         for modName, modDef in self.moduleDefs.items():
             with cd(modDef.absDirname):
                 if verbose:
-                    print("Loading {0}".format(modDef.moduleName))
+                    print("Loading module {0}".format(modDef.moduleName))
                 mod = XformModule(modDef)
                 if mod.loadModuleCode():
                     self.modules[modName] = mod
@@ -60,54 +62,28 @@ class Runway(object):
             with cd(schDef.absDirname):
                 self.schemaRepo.addFromDescription(schDef)
 
+    def setMdb(self, mda):
+        self.codeRegistry.removeService(mda.name, mda.version)
+        self.codeRegistry.addService(mda)
+
     def initModules(self, tags=None):
         '''Initialize modules from their configs.'''
-        self.moduleCfgs = self.warehouse.getModuleConfigs(self.modules)
+        self.moduleCfgs = self.warehouse.getModuleConfigs(self.dba, self.modules)
         verbose = self.dba.isVerbose()
-        self.dba.table('fashion.core.module.config').purge()
-        self.dba.table('fashion.core.module.object').purge()
         for cfg in self.moduleCfgs:
             with cd(cfg.absDirname):
                 with ModelAccess(self.dba, self.schemaRepo, cfg) as mdb:
+                    self.setMdb(mdb)
                     mod = self.modules[cfg.moduleName]
                     if verbose:
                         print("Initializing module {0}".format(
                             mod.properties.moduleName))
-                    xfObjs = mod.init(cfg, mdb, tags)
-                    self.dba.table('fashion.core.module.config').insert(cfg)
-                    for xfo in xfObjs:
-                        if verbose:
-                            print("Created xform object {0}".format(xfo.name))
-                        if xfo.name in self.objects:
-                            logging.error(
-                                "Duplicate xform object name: {0}".format(xfo.name))
-                        else:
-                            # TODO: set up templatePath
-                            if not hasattr(xfo, "templatePath"):
-                                xfo.templatePath = cfg.templatePath
-                            self.objects[xfo.name] = xfo
-                            # obj = Munch({
-                            #     "name": xfo.name,
-                            #     "tags": xfo.tags,
-                            #     "inputKinds": xfo.inputKinds,
-                            #     "outputKinds": xfo.outputKinds,
-                            # })
-                            obj = vars(xfo)
-                            self.dba.table('fashion.core.module.object').insert(obj)
-
-    def initMirror(self, projDir, mirrorDir, force=False):
-        '''Set a database singleton record with mirror info.'''
-        ctx = Munch({"name": "fashion.core.runway",
-                     "inputKinds": [], "templatePath": [],
-                     "outputKinds": ['fashion.core.mirror']})
-        with ModelAccess(self.dba, self.schemaRepo, ctx) as mdb:
-            mdb.setSingleton("fashion.core.mirror",
-                             {"projectPath": str(projDir),
-                              "mirrorPath": str(mirrorDir),
-                              "force": force})
+                    self.codeRegistry.setObjectConfig(cfg)
+                    mod.init(cfg, self.codeRegistry, tags)
 
     def plan(self):
         '''Construction the xform execution plan.'''
+        self.objects = self.codeRegistry.xformObjectsByName
         self.xfOutputs = {xf.name: set(xf.outputKinds)
                           for xf in self.objects.values()}
         self.xfInputs = {xf.name: set(xf.inputKinds)
@@ -174,9 +150,22 @@ class Runway(object):
             xfo = self.objects[xfName]
             try:
                 with ModelAccess(self.dba, self.schemaRepo, xfo) as mdb:
-                    if self.dba.isVerbose():
+                    self.setMdb(mdb)
+                    if verbose:
                         print("Executing {0}".format(xfo.name))
-                    xfo.execute(mdb, verbose, tags)
+                    cfg = self.codeRegistry.getObjectConfig(xfo.name)
+                    Definition = Query()
+                    defs = self.dba.table('fashion.prime.module.definition').search(Definition.moduleName == cfg.moduleName)
+                    assert len(defs) == 1
+                    defn = munchify(defs[0])
+                    tplSvc = self.codeRegistry.getService('fashion.core.template')
+                    tplSvc.setDefinitionPath(
+                        defn.absDirname,
+                        defn.templatePath)
+                    tplSvc.setConfigurationPath(
+                        cfg.absDirname,
+                        cfg.templatePath)
+                    xfo.execute(self.codeRegistry, verbose, tags)
             except:
                 logging.error("aborting, xform error: {0}".format(xfName))
                 traceback.print_exc()

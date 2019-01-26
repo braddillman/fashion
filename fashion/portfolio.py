@@ -63,15 +63,13 @@ class Portfolio(object):
         self.properties = munchify({
             "name": "fashion",
             "defaultSegment": "local",
-            "warehouses": [
-                (self.fashionPath / 'warehouse').as_posix(),        
-                FASHION_WAREHOUSE_PATH.as_posix()
-            ]
+            "warehouses": [(self.fashionPath / 'warehouse').as_posix()]
         })
 
     def loadWarehouses(self):
         self.warehouse = None
         wl = copy.copy(self.properties.warehouses)
+        wl.append(FASHION_WAREHOUSE_PATH.as_posix())
         wl.reverse()
         for wp in wl:
             self.warehouse = Warehouse(Path(wp), self.warehouse)
@@ -88,7 +86,8 @@ class Portfolio(object):
             self.fashionPath.mkdir(parents=True, exist_ok=True)
             (self.fashionPath / "warehouse").mkdir(parents=True, exist_ok=True)
             self.db = DatabaseAccess(self.fashionDbPath)
-            self.warehouse.newSegment("local")
+            self.loadWarehouses()
+            self.warehouse.newSegment("local", self.db)
             self.save()
 
     def delete(self):
@@ -110,7 +109,7 @@ class Portfolio(object):
         self.loadWarehouses()
 
     def defaultSegment(self):
-        return self.warehouse.loadSegment(self.defaultSegmentName())
+        return self.warehouse.loadSegment(self.defaultSegmentName(), self.db)
 
     def defaultSegmentName(self):
         return self.properties.defaultSegment

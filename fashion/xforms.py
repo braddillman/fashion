@@ -15,6 +15,9 @@ import logging
 import os
 import traceback
 
+from packaging.specifiers import SpecifierSet
+from packaging.version import Version
+
 
 def matchTags(requestedTags, moduleTags):
     '''Check if module tags include requested tags.'''
@@ -56,27 +59,20 @@ class XformModule():
                     self.properties.moduleName, self.properties.filename))
         return self.isLoaded
 
-    def init(self, xfModConfig, mdb, tags=None):
+    def init(self, xfModConfig, codeRegistry, tags=None):
         '''
         Initialize an xform module and get the xform objects.
         :return: a list of xform objects.
         '''
-        xfObjs = []
         if not self.isLoaded:
             logging.error("Can't init unloaded module: {0}".format(
                 self.properties.moduleName))
-            return xfObjs
         if matchTags(tags, xfModConfig.tags):
             try:
-                xfs = self.mod.init(xfModConfig, mdb, tags)
-                for xf in xfs:
-                    # Now double check object tags as well as module tags
-                    if matchTags(tags, xf.tags):
-                        xfObjs.append(xf)
+                self.mod.init(xfModConfig, codeRegistry, tags)
             except:
                 logging.error("aborting, xform module init error: {0}".format(
                     xfModConfig.moduleName))
                 traceback.print_exc()
                 # TODO: add trace and debug info into mdb context
                 # or insert object into mdb
-        return xfObjs

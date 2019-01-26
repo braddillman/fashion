@@ -76,8 +76,11 @@ def setup(args):
     argsObj = munchify(vars(args))
     del argsObj["func"]
     argsObj.project = argsObj.project.as_posix()
-    portfolio.db.setSingleton('fashion.core.args', argsObj)
-    portfolio.db.setSingleton('fashion.core.portfolio', portfolio.properties)
+    portfolio.db.setSingleton('fashion.prime.args', argsObj)
+    pf = munchify(portfolio.properties)
+    pf.projectPath = portfolio.projectPath.as_posix()
+    pf.mirrorPath = portfolio.mirrorPath.as_posix()
+    portfolio.db.setSingleton('fashion.prime.portfolio', pf)
     return True
 
 
@@ -128,8 +131,6 @@ def build(args):
     print("building...")
     with cd(portfolio.projectPath):
         r = portfolio.getRunway()
-        r.initMirror(portfolio.projectPath,
-                     portfolio.mirrorPath, force=args.force)
         r.plan()
         r.execute()
 
