@@ -92,7 +92,7 @@ setup(
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=[
         'tinydb==3.12.2', 'munch==2.3.2', 'jsonschema==2.6.0', 
-        'genson==1.0.2', 'xmltodict==0.11.0', 'Jinja2==2.10',
+        'genson==1.0.2', 'xmltodict==0.11.0', 'Jinja2==2.11.3',
         'packaging==18.0'
     ],
 

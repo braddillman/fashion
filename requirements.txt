@@ -1,7 +1,7 @@
 packaging==18.0
 tinydb==3.12.2
 munch==2.3.2
-Jinja2==2.10
+Jinja2==2.11.3
 jsonschema==2.6.0
 genson==1.0.2
 ujson==1.35
